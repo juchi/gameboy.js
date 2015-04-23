@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf8"/>
+    <title>Gameboy emulator</title>
+    <link rel="stylesheet" href="./css/styles.css" type="text/css"/>
+</head>
+<body>
+
+<h1>Gameboy emulator</h1>
+
+<canvas id="canvas">Your browser does not seem to support canvas.</canvas>
+
+<p>
+    <label for="file">Choose a ROM file on your computer:</label>
+    <input type="file" id="file"/>
+</p>
+
+<footer>by Juchi</footer>
+
+<script type="text/javascript" src="./js/rom.js"></script>
+<script type="text/javascript" src="./js/screen.js"></script>
+<script type="text/javascript" src="./js/processor.js"></script>
+<script type="text/javascript" src="./js/input.js"></script>
+<script type="text/javascript" src="./js/main.js"></script>
+
+<script>
+var g = new Gameboy(document.getElementById('canvas'));
+</script>
+</body>
+</html>

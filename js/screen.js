@@ -13,14 +13,16 @@ var Screen = function(canvas, cpu) {
     this.SCY = 0xFF42;
     this.SCX = 0xFF43;
     //this.colors = ['red','green','blue','yellow'];
-    this.vram = cpu.vram.bind(cpu);
+    this.vram = cpu.memory.vram.bind(cpu.memory);
     this.tilemap = {
         HEIGHT: 32,
         WIDTH: 32,
-        START: 0x9800, // variable
+        START_0: 0x9800,
+        START_1: 0x9C00,
         LENGTH: 0x0400 // 1024 bytes = 32*32
     };
-    this.deviceram = cpu.deviceram.bind(cpu);
+    this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
+    this.LCDC = 0;
 
     canvas.width = this.WIDTH * this.PIXELSIZE;
     canvas.height = this.HEIGHT * this.PIXELSIZE;
@@ -32,8 +34,8 @@ Screen.prototype.drawFrame = function() {
     var d1 = new Date();
 
     this.clearScreen();
-    var LCDC = this.deviceram(0xFF40);
-    var enable = (LCDC & 0b10000000) >> 7;
+    this.LCDC = this.deviceram(0xFF40);
+    var enable = Memory.readBit(this.LCDC, 7);
     if (enable) {
         this.drawBackground();
         this.drawWindow();
@@ -43,8 +45,12 @@ Screen.prototype.drawFrame = function() {
 };
 
 Screen.prototype.drawBackground = function() {
+    if (!Memory.readBit(this.LCDC, 0)) {
+        return;
+    }
+
     var buffer = new Array(256*256);
-    var mapStart = this.tilemap.START;
+    var mapStart = Memory.readBit(this.LCDC, 3) ? this.tilemap.START_1 : this.tilemap.START_0;
     // browse BG tilemap
     for (var i = 0; i < this.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
@@ -79,7 +85,7 @@ Screen.prototype.drawTile = function(tileData, index, buffer) {
 };
 
 Screen.prototype.readTileData = function(tileIndex) {
-    var dataStart = 0x8000;
+    var dataStart = Memory.readBit(this.LCDC, 4) ? 0x8000 : 0x8800;
     var tileSize  = 0x10; // 16 bytes / tile
     var tileData = new Array();
 

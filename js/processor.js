@@ -1,18 +1,4 @@
 var Processor = function() {
-    this.MEM_SIZE = 65536; // 64KB
-
-    this.addresses = {
-        VRAM_START : 0x8000,
-        VRAM_END   : 0x9FFF,
-
-        EXTRAM_START : 0xA000,
-        EXTRAM_END   : 0xBFFF,
-
-        INTERRUPT_REGISTER : 0xFFF,
-
-        SPRITE_START : 0xFE00,
-        SPRITE_END   : 0xFEFF
-    };
 
     this.INTERRUPTS = {
         TIMER: 2
@@ -29,13 +15,11 @@ var Processor = function() {
 
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
     this.clock = {c: 0};
+    this.memory = new Memory();
 };
 
 Processor.prototype.reset = function() {
-    this.memory = new Array(this.MEM_SIZE);
-    for (var i = this.addresses.VRAM_START; i < this.addresses.VRAM_END; i++) {
-        this.memory[i] = 0;
-    }
+    this.memory.reset();
 
     this.r.sp = 0xFFEF;
     this.r.pc = 0x0100;
@@ -97,22 +81,6 @@ Processor.prototype.frame = function() {
     this.screen.drawFrame();
 
     console.log('end frame - '+skipped+' instructions skipped');
-};
-
-Processor.prototype.vram = function(address) {
-    if (address < this.addresses.VRAM_START || address > this.addresses.VRAM_END) {
-        throw 'VRAM access in out of bounds address ' + address;
-    }
-
-    return this.memory[address];
-};
-
-Processor.prototype.deviceram = function(address) {
-    if (address < this.addresses.DEVICERAM_START || address > this.addresses.DEVICERAM_END) {
-        throw 'Device RAM access in out of bounds address ' + address;
-    }
-
-    return this.memory[address];
 };
 
 Processor.prototype.timer = function() {

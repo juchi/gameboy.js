@@ -112,15 +112,15 @@ var opcodes = {
     0x04: function(p){ops.INCr(p, 'B');},
     0x05: function(p){ops.DECr(p, 'B');},
     0x06: function(p){ops.LDrn(p, 'B');},
-    0x07: function(p){},
+    0x07: function(p){p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=((p.r.A<<1)+out)&0xFF;p.clock.c+=4;},
     0x08: function(p){},
     0x09: function(p){},
     0x0A: function(p){},
-    0x0B: function(p){},
+    0x0B: function(p){ops.DECrr(p, 'B', 'C');},
     0x0C: function(p){ops.INCr(p, 'C');},
     0x0D: function(p){ops.DECr(p, 'C');},
     0x0E: function(p){ops.LDrn(p, 'C');},
-    0x0F: function(p){},
+    0x0F: function(p){p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)&(out*0x80);p.clock.c+=4;},
 
     0x10: function(p){p.r.pc++;p.clock.c+=4;},
     0x11: function(p){ops.LDrrnn(p, 'D', 'E');},
@@ -129,15 +129,15 @@ var opcodes = {
     0x14: function(p){ops.INCr(p, 'D');},
     0x15: function(p){ops.DECCr(p, 'D');},
     0x16: function(p){ops.LDrn(p, 'D');},
-    0x17: function(p){},
+    0x17: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A<<1)+c;p.clock.c+=4;},
     0x18: function(p){},
     0x19: function(p){},
     0x1A: function(p){},
-    0x1B: function(p){},
+    0x1B: function(p){ops.DECrr(p, 'D', 'E');},
     0x1C: function(p){ops.INCr(p, 'E');},
     0x1D: function(p){ops.DECr(p, 'E');},
     0x1E: function(p){ops.LDrn(p, 'E');},
-    0x1F: function(p){},
+    0x1F: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)&(c*0x80);p.clock.c+=4;},
 
     0x40: function(p){ops.LDrr(p, 'B', 'B');},
     0x41: function(p){ops.LDrr(p, 'B', 'C');},
@@ -205,7 +205,42 @@ var opcodes = {
     0x7C: function(p){ops.LDrr(p, 'A', 'H');},
     0x7D: function(p){ops.LDrr(p, 'A', 'L');},
     0x7E: function(p){ops.LDrrra(p, 'A', 'H', 'L');},
-    0x7F: function(p){ops.LDrr(p, 'A', 'A');}
+    0x7F: function(p){ops.LDrr(p, 'A', 'A');},
+
+    0x80: function(p){ops.ADDrr(p, 'A', 'B');},
+    0x81: function(p){ops.ADDrr(p, 'A', 'C');},
+    0x82: function(p){ops.ADDrr(p, 'A', 'D');},
+    0x83: function(p){ops.ADDrr(p, 'A', 'E');},
+    0x84: function(p){ops.ADDrr(p, 'A', 'H');},
+    0x85: function(p){ops.ADDrr(p, 'A', 'L');},
+    0x86: function(p){},
+    0x87: function(p){ops.ADDrr(p, 'A', 'A');},
+
+    0xA0: function(p){ops.ANDr(p, 'B');},
+    0xA1: function(p){ops.ANDr(p, 'C');},
+    0xA2: function(p){ops.ANDr(p, 'D');},
+    0xA3: function(p){ops.ANDr(p, 'E');},
+    0xA4: function(p){ops.ANDr(p, 'H');},
+    0xA5: function(p){ops.ANDr(p, 'L');},
+    0xA6: function(p){},
+    0xA7: function(p){ops.ANDr(p, 'A');},
+    0xA8: function(p){ops.XORr(p, 'B');},
+    0xA9: function(p){ops.XORr(p, 'C');},
+    0xAA: function(p){ops.XORr(p, 'D');},
+    0xAB: function(p){ops.XORr(p, 'E');},
+    0xAC: function(p){ops.XORr(p, 'H');},
+    0xAD: function(p){ops.XORr(p, 'L');},
+    0xAE: function(p){},
+    0xAF: function(p){ops.XORr(p, 'A');},
+
+    0xB0: function(p){ops.ORr(p, 'B');},
+    0xB1: function(p){ops.ORr(p, 'C');},
+    0xB2: function(p){ops.ORr(p, 'D');},
+    0xB3: function(p){ops.ORr(p, 'E');},
+    0xB4: function(p){ops.ORr(p, 'H');},
+    0xB5: function(p){ops.ORr(p, 'L');},
+    0xB6: function(p){},
+    0xB7: function(p){ops.ORr(p, 'A');}
 };
 
 var ops = {
@@ -216,5 +251,12 @@ var ops = {
     LDrr:   function(p, r1, r2) {p.r[r1] = p.r[r2];p.clock.c += 4;},
     INCrr:  function(p, r1, r2) {p.r[r2]=(p.r[r2]+1)&255; p.r[r2] == 0 ? p.r[r1] = (p.r[r1]+1)&255:null;p.clock.c += 8;},
     INCr:   function(p, r1) {p.r[r1] = (p.r[r1] + 1) & 255;p.clock.c += 4;},
-    DECr:   function(p, r1) {p.r[r1] = (p.r[r1] - 1) & 255;p.clock.c += 4;}
+    DECrr:  function(p, r1, r2) {p.r[r2] = (p.r[r2] - 1) & 255; if (p.r[r2] == 255) p.r[r1] = (p.r[r1] - 1) & 255;p.clock.c += 8;},
+    DECr:   function(p, r1) {p.r[r1] = (p.r[r1] - 1) & 255;p.clock.c += 4;},
+    ADDrr:  function(p, r1, r2) {var h=((p.r[r1]&0xF)+(p.r[r2]&0xF))&0x10;p.r[r1]+=p.r[r2];var c=p.r[r1]&0x100;p.r[r1]&=255;
+        var f = 0;if (p.r[r1]==0)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;
+        p.clock.c += 4;},
+    ORr:    function(p, r1) {p.r.A|=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
+    ANDr:   function(p, r1) {p.r.A&=p.r[r1];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 4;},
+    XORr:   function(p, r1) {p.r.A^=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;}
 };

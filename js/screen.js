@@ -41,7 +41,7 @@ Screen.prototype.drawFrame = function() {
         this.drawWindow();
     }
     var d2 = new Date();
-    console.log(d2.getTime() - d1.getTime());
+    console.log('frame time '+(d2.getTime() - d1.getTime()));
 };
 
 Screen.prototype.drawBackground = function() {

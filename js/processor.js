@@ -90,7 +90,7 @@ var opcodes = {
     0x07: function(p){p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=((p.r.A<<1)+out)&0xFF;p.clock.c+=4;},
     //0x08: function(p){},
     //0x09: function(p){},
-    //0x0A: function(p){},
+    0x0A: function(p){ops.LDrrra(p, 'A', 'B', 'C');},
     0x0B: function(p){ops.DECrr(p, 'B', 'C');},
     0x0C: function(p){ops.INCr(p, 'C');},
     0x0D: function(p){ops.DECr(p, 'C');},
@@ -107,7 +107,7 @@ var opcodes = {
     0x17: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A<<1)+c;p.clock.c+=4;},
     0x18: function(p){ops.JRn(p);},
     //0x19: function(p){},
-    //0x1A: function(p){},
+    0x1A: function(p){ops.LDrrra(p, 'A', 'D', 'E');},
     0x1B: function(p){ops.DECrr(p, 'D', 'E');},
     0x1C: function(p){ops.INCr(p, 'E');},
     0x1D: function(p){ops.DECr(p, 'E');},
@@ -226,6 +226,14 @@ var opcodes = {
     0x8E: function(p){ops.ADCrrra(p, 'A', 'H', 'L');},
     0x8F: function(p){ops.ADCrr(p, 'A', 'A');},
 
+    0x90: function(p){ops.SUBr(p, 'B');},
+    0x91: function(p){ops.SUBr(p, 'C');},
+    0x92: function(p){ops.SUBr(p, 'D');},
+    0x93: function(p){ops.SUBr(p, 'E');},
+    0x94: function(p){ops.SUBr(p, 'H');},
+    0x95: function(p){ops.SUBr(p, 'L');},
+    0x97: function(p){ops.SUBr(p, 'A');},
+
     0xA0: function(p){ops.ANDr(p, 'B');},
     0xA1: function(p){ops.ANDr(p, 'C');},
     0xA2: function(p){ops.ANDr(p, 'D');},
@@ -266,6 +274,7 @@ var opcodes = {
     0xC3: function(p){ops.JPnn(p);},
     0xC4: function(p){ops.CALLccnn(p, 'NZ');},
     0xC5: function(p){ops.PUSHrr(p, 'B', 'C');},
+    0xC6: function(p){ops.ADDrn(p, 'A');},
     0xC7: function(p){ops.RSTn(p, 0x00);},
     0xC8: function(p){ops.RETcc(p, 'Z');},
     0xC9: function(p){ops.RET(p);},
@@ -281,6 +290,7 @@ var opcodes = {
     //0xD3 empty
     0xD4: function(p){ops.CALLccnn(p, 'NC');},
     0xD5: function(p){ops.PUSHrr(p, 'D', 'E');},
+    0xD6: function(p){ops.SUBn(p);},
     0xD7: function(p){ops.RSTn(p, 0x10);},
     0xD8: function(p){ops.RETcc(p, 'C');},
     0xDA: function(p){ops.JPccnn(p, 'C');},
@@ -340,9 +350,10 @@ var ops = {
     DECr:   function(p, r1) {var h = (p.r[r1]&0xF) < 1;p.r[r1] = (p.r[r1] - 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},
-    ADDrr:  function(p, r1, r2) {var h=((p.r[r1]&0xF)+(p.r[r2]&0xF))&0x10;p.r[r1]+=p.r[r2];var c=p.r[r1]&0x100;p.r[r1]&=255;
-        var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
-        p.clock.c += 4;},
+    ADDrr:  function(p, r1, r2) {var n = p.r[r2];ops._ADDrn(p, r1, n); p.clock.c += 4;},
+    ADDrn:  function(p, r1) {var n = p.memory[p.r.pc++];ops._ADDrn(p, r1, n); p.clock.c+=8;},
+    _ADDrn: function(p, r1, n) {var h=((p.r[r1]&0xF)+(n&0xF))&0x10;p.r[r1]+=n;var c=p.r[r1]&0x100;p.r[r1]&=255;
+            var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
     ADCrr:  function(p, r1, r2) {var n = p.r[r2]; ops._ADCrn(p, r1, n); p.clock.c += 4;},
     ADCrn:  function(p, r1) {var n = p.memory[p.r.pc++]; ops._ADCrn(p, r1, n); p.clock.c += 8;},
     _ADCrn: function(p, r1, n) {
@@ -354,6 +365,11 @@ var ops = {
     ADDrrra:function(p, r1, r2, r3) {var v = p.memory[(p.r[r2] << 8)+ p.r[r3]];var h=((p.r[r1]&0xF)+(v&0xF))&0x10;p.r[r1]+=v;var c=p.r[r1]&0x100;p.r[r1]&=255;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
         p.clock.c += 8;},
+    SUBr:   function(p, r1) {var n = p.r[r1];ops._SUBn(p, n);p.clock.c += 4;},
+    SUBn:   function(p) {var n = p.memory[p.r.pc++];ops._SUBn(p, n);p.clock.c += 8;},
+    _SUBn:  function(p, n) {var c = p.r.A < n;var h = ((p.r.A&0xF) + (n&0xF))&0x10;
+        p.r.A -= n;p.r.A&=0xFF; var z = p.r.A==0?1:0;
+        var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
     ORr:    function(p, r1) {p.r.A|=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     ORn:    function(p) {p.r.A|=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     ORrra:  function(p, r1, r2) {p.r.A|=p.memory[(p.r[r1] << 8)+ p.r[r2]];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},

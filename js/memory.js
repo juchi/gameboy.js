@@ -35,8 +35,8 @@ Memory.prototype.setRomData = function(data) {
 };
 
 Memory.prototype.loadRomBank = function(index) {
-    start = index ? 0x4000 : 0x0;
-    var romStart = index * 0x3FFF;
+    var start = index ? 0x4000 : 0x0;
+    var romStart = index * 0x4000;
     for (var i = 0; i < this.banksize; i++) {
         this[i + start] = this.rom[romStart + i];
     }

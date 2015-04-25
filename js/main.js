@@ -4,7 +4,6 @@ var Gameboy = function(canvas) {
     this.cpu = cpu;
     this.screen = screen;
 
-
     var rom = new Rom();
     var that = this;
     document.getElementById('file').addEventListener('change', function(e){
@@ -14,6 +13,6 @@ var Gameboy = function(canvas) {
 
 Gameboy.prototype.startRom = function(data) {
     this.cpu.reset();
-    this.cpu.fillRomMemory(data);
+    this.cpu.loadRom(data);
     this.cpu.run();
 };

@@ -25,11 +25,8 @@ Processor.prototype.reset = function() {
     this.r.pc = 0x0100;
 };
 
-Processor.prototype.fillRomMemory = function(data, start) {
-    start = start || 0;
-    for (var i = 0; i < data.length; i++) {
-        this.memory[i + start] = data[i];
-    }
+Processor.prototype.loadRom = function(data) {
+    this.memory.setRomData(data);
 };
 
 Processor.prototype.run = function() {

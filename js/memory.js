@@ -11,6 +11,11 @@ var Memory = function() {
     };
 
     this.MEM_SIZE = 65536; // 64KB
+
+    this.romBankNumber = 0;
+    this.MBCtype = 0;
+    this.banksize = 0x3FFF;
+    this.rom = null;
 };
 
 Memory.prototype = new Array();
@@ -19,6 +24,21 @@ Memory.prototype.reset = function() {
     this.length = this.MEM_SIZE;
     for (var i = this.addresses.VRAM_START; i < this.addresses.VRAM_END; i++) {
         this[i] = 0;
+    }
+};
+
+Memory.prototype.setRomData = function(data) {
+    this.rom = data;
+
+    this.loadRomBank(0);
+    this.loadRomBank(1);
+};
+
+Memory.prototype.loadRomBank = function(index) {
+    start = index ? 0x4000 : 0x0;
+    var romStart = index * 0x3FFF;
+    for (var i = 0; i < this.banksize; i++) {
+        this[i + start] = this.rom[romStart + i];
     }
 };
 
@@ -37,6 +57,20 @@ Memory.prototype.deviceram = function(address) {
 
     return this[address];
 };
+Memory.prototype.wb = function(addr, value) {
+    switch (addr & 0xF000) {
+        case 0x0000: case 0x1000: // enable RAM
+            break;
+        case 0x2000: case 0x3000: // ROM bank number lower 5 bits
+            value &= 0x1F;
+            if (value == 0) value = 1;
+            this.romBankNumber = (this.romBankNumber&0xE0) +value;
+            this.loadRomBank(this.romBankNumber);
+            break;
+        default:
+            this[addr] = value;
+    }
+}
 
 Memory.readBit = function(byte, index) {
     return (byte >> index) & 1;

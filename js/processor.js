@@ -21,7 +21,7 @@ var Processor = function() {
 Processor.prototype.reset = function() {
     this.memory.reset();
 
-    this.r.sp = 0xFFEF;
+    this.r.sp = 0xFFFE;
     this.r.pc = 0x0100;
 };
 
@@ -47,18 +47,15 @@ Processor.prototype.frame = function() {
         var opcode = this.memory[this.r.pc++];
         if (!opcodes[opcode]) {
             skipped++;
-            if (skipped) {console.log('skip '+opcode+' at '+(this.r.pc-1));break;}
+            if (skipped && opcode) {console.log('skip '+opcode.toString(16)+' at '+(this.r.pc-1).toString(16));}
             this.clock.c += 4;
             continue;
         }
-        var old=this.r.pc-1;
         opcodes[opcode](this);
-        if (this.r.pc > 0x8000) console.log('opcode : '+opcode+ ' old pc '+old+' dest '+this.r.pc);
     }
     this.screen.drawFrame();
 
     console.log('end frame - '+skipped+' instructions skipped');
-    console.log(this.r.pc);
 };
 
 Processor.prototype.timer = function() {
@@ -126,9 +123,17 @@ var opcodes = {
     0x26: function(p){ops.LDrn(p, 'H');},
     0x28: function(p){ops.JRccn(p, 'Z');},
     0x2A: function(p){ops.LDrrra(p, 'A', 'H', 'L');ops.INCrr(p, 'H', 'L');p.clock.c -= 8;},
+    0x2B: function(p){ops.DECrr(p, 'H', 'L');},
+    0x2C: function(p){ops.INCr(p, 'L');},
+    0x2D: function(p){ops.DECr(p, 'L');},
+    0x2E: function(p){ops.LDrn(p, 'L');},
 
     0x30: function(p){ops.JRccn(p, 'NC');},
+    0x31: function(p){ops.LDspnn(p);},
     0x38: function(p){ops.JRccn(p, 'C');},
+    0x3C: function(p){ops.INCr(p, 'A');},
+    0x3D: function(p){ops.DECr(p, 'A');},
+    0x3E: function(p){ops.LDrn(p, 'A');},
 
     0x40: function(p){ops.LDrr(p, 'B', 'B');},
     0x41: function(p){ops.LDrr(p, 'B', 'C');},
@@ -249,12 +254,63 @@ var opcodes = {
     0xBE: function(p){ops.CPrra(p, 'H', 'L');},
     0xBF: function(p){ops.CPr(p, 'A');},
 
+    0xC0: function(p){ops.RETcc(p, 'NZ');},
+    0xC1: function(p){ops.POPrr(p, 'B', 'C');},
     0xC2: function(p){ops.JPccnn(p, 'NZ');},
     0xC3: function(p){ops.JPnn(p);},
+    0xC4: function(p){ops.CALLccnn(p, 'NZ');},
+    0xC5: function(p){ops.PUSHrr(p, 'B', 'C');},
+    0xC7: function(p){ops.RSTn(p, 0x00);},
+    0xC8: function(p){ops.RETcc(p, 'Z');},
+    0xC9: function(p){ops.RET(p);},
     0xCA: function(p){ops.JPccnn(p, 'Z');},
+    0xCC: function(p){ops.CALLccnn(p, 'Z');},
+    0xCD: function(p){ops.CALLnn(p);},
+    0xCE: function(p){ops.ADCrn(p, 'A');},
+    0xCF: function(p){ops.RSTn(p, 0x08);},
+
+    0xD0: function(p){ops.RETcc(p, 'NC');},
+    0xD1: function(p){ops.POPrr(p, 'D', 'E');},
     0xD2: function(p){ops.JPccnn(p, 'NC');},
+    //0xD3 empty
+    0xD4: function(p){ops.CALLccnn(p, 'NC');},
+    0xD5: function(p){ops.PUSHrr(p, 'D', 'E');},
+    0xD7: function(p){ops.RSTn(p, 0x10);},
+    0xD8: function(p){ops.RETcc(p, 'C');},
     0xDA: function(p){ops.JPccnn(p, 'C');},
-    0xE9: function(p){ops.JPrr(p, 'H', 'L');}
+    //0xDB empty
+    0xDC: function(p){ops.CALLccnn(p, 'C');},
+    //0xDD empty
+    0xDF: function(p){ops.RSTn(p, 0x18);},
+
+    0xE0: function(p){ops.LDHnar(p, 'A');},
+    0xE1: function(p){ops.POPrr(p, 'H', 'L');},
+    0xE2: function(p){ops.LDrar(p, 'C', 'A');},
+    //0xE3 empty
+    //0xE4 empty
+    0xE5: function(p){ops.PUSHrr(p, 'H', 'L');},
+    0xE6: function(p){ops.ANDn(p);},
+    0xE7: function(p){ops.RSTn(p, 0x20);},
+    0xE9: function(p){ops.JPrr(p, 'H', 'L');},
+    0xEA: function(p){ops.LDnnar(p, 'A');},
+    //0xEB empty
+    //0xEC empty
+    //0xED empty
+    0xEE: function(p){ops.XORn(p);},
+    0xEF: function(p){ops.RSTn(p, 0x28);},
+
+    0xF0: function(p){ops.LDHrna(p, 'A');},
+    0xF1: function(p){ops.POPrr(p, 'A', 'F');},
+    0xF2: function(p){ops.LDrra(p, 'A', 'C');},
+    //0xF4 empty
+    0xF5: function(p){ops.PUSHrr(p, 'A', 'F');},
+    0xF6: function(p){ops.ORn(p);},
+    0xF7: function(p){ops.RSTn(p, 0x30);},
+    0xFA: function(p){ops.LDrnna(p, 'A');},
+    //0xFC empty
+    //0xFD empty
+    0xFE: function(p){ops.CPn(p);},
+    0xFF: function(p){ops.RSTn(p, 0x38);}
 };
 
 var ops = {
@@ -263,6 +319,13 @@ var ops = {
     LDrrra: function(p, r1, r2, r3) {p.r[r1] = p.memory[(p.r[r2] << 8)+ p.r[r3]];p.clock.c += 8;},
     LDrn:   function(p, r1) {p.r[r1] = p.memory[p.r.pc++];p.clock.c += 8;},
     LDrr:   function(p, r1, r2) {p.r[r1] = p.r[r2];p.clock.c += 4;},
+    LDrar:  function(p, r1, r2) {p.memory[p.r[r1]+0xFF] = p.r[r2];p.r.pc++;p.clock.c += 8;},
+    LDrra:  function(p, r1, r2) {p.r[r1] = p.memory[p.r[r2]+0xFF];p.r.pc++;p.clock.c += 8;},
+    LDspnn: function(p){p.r.sp = (p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r.pc+=2;p.clock.c += 12;},
+    LDnnar: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory[addr]=p.r[r1];p.r.pc+=2; p.clock.c += 16;},
+    LDrnna: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r[r1]=p.memory[addr];p.r.pc+=2; p.clock.c += 16;},
+    LDHnar: function(p, r1){p.memory[0xFF00 + p.memory[p.r.pc++]] = p.r[r1];p.clock.c+=12;},
+    LDHrna: function(p, r1){p.r[r1]=p.memory[0xFF00 + p.memory[p.r.pc++]];p.clock.c+=12;},
     INCrr:  function(p, r1, r2) {p.r[r2]=(p.r[r2]+1)&255; p.r[r2] == 0 ? p.r[r1] = (p.r[r1]+1)&255:null;p.clock.c += 8;},
     INCr:   function(p, r1) {var h = (p.r[r1]&0xF + 1)&0x10;p.r[r1] = (p.r[r1] + 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
@@ -274,30 +337,50 @@ var ops = {
     ADDrr:  function(p, r1, r2) {var h=((p.r[r1]&0xF)+(p.r[r2]&0xF))&0x10;p.r[r1]+=p.r[r2];var c=p.r[r1]&0x100;p.r[r1]&=255;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
         p.clock.c += 4;},
-    ADCrr:  function(p, r1, r2) {var c = p.r.F&0x10?1:0;var h=((p.r[r1]&0xF)+(p.r[r2]&0xF)+1)&0x10;p.r[r1]+=p.r[r2]+c;c=p.r[r1]&0x100;p.r[r1]&=255;
+    ADCrr:  function(p, r1, r2) {var n = p.r[r2]; ops._ADCrn(p, r1, n); p.clock.c += 4;},
+    ADCrn:  function(p, r1) {var n = p.memory[p.r.pc++]; ops._ADCrn(p, r1, n); p.clock.c += 8;},
+    _ADCrn: function(p, r1, n) {
+        var c = p.r.F&0x10?1:0;var h=((p.r[r1]&0xF)+(n&0xF)+c)&0x10;
+        p.r[r1]+=n+c;c=p.r[r1]&0x100;p.r[r1]&=255;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
-        p.clock.c += 4;},
+    },
+    ADCrrra:function(p, r1, r2, r3) {var n = p.memory[(p.r[r2] << 8)+ p.r[r3]]; ops._ADCrn(p, r1, n); p.clock.c += 8;},
     ADDrrra:function(p, r1, r2, r3) {var v = p.memory[(p.r[r2] << 8)+ p.r[r3]];var h=((p.r[r1]&0xF)+(v&0xF))&0x10;p.r[r1]+=v;var c=p.r[r1]&0x100;p.r[r1]&=255;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
         p.clock.c += 8;},
-    ADCrrra:function(p, r1, r2, r3) {var c = p.r.F&0x10?1:0;var v = p.memory[(p.r[r2] << 8)+ p.r[r3]];var h=((p.r[r1]&0xF)+(v&0xF)+c)&0x10; p.r[r1]+=v+c;c=p.r[r1]&0x100;p.r[r1]&=255;
-        var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
-        p.clock.c += 8;},
     ORr:    function(p, r1) {p.r.A|=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
+    ORn:    function(p) {p.r.A|=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     ORrra:  function(p, r1, r2) {p.r.A|=p.memory[(p.r[r1] << 8)+ p.r[r2]];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},
     ANDr:   function(p, r1) {p.r.A&=p.r[r1];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 4;},
+    ANDn:   function(p) {p.r.A&=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 4;},
     XORr:   function(p, r1) {p.r.A^=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
+    XORn:   function(p) {p.r.A^=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     XORrra: function(p, r1, r2) {p.r.A^=p.memory[(p.r[r1] << 8)+ p.r[r2]];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},
-    CPr:    function(p, r1) {var c = p.r.A < p.r[r1];var z = p.r.A == p.r[r1];p.r.A -= p.r[r1];var h = (p.r.A&0xF) < (p.r[r1]&0xF);
-        var f = 0x40;if(z)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;
-        p.clock.c += 4;},
-    JPnn:   function(p) {/*console.log('JPnn '+p.r.pc);*/ p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c += 12;},
-    JRccn:  function(p, cc) {/*console.log('JRccn '+p.r.pc);*/var t=1;var mask=0x10;if (cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
-        if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){var v=p.memory[p.r.pc];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}
+    CPr:    function(p, r1) {var n = p.r[r1];ops._CPn(p, n); p.clock.c += 4;},
+    CPn:    function(p) {var n =p.memory[p.r.pc++];ops._CPn(p, n);p.clock.c+=8;},
+    _CPn:   function(p, n) {
+        var c = p.r.A < n;var z = p.r.A == n;p.r.A -= n;var h = (p.r.A&0xF) < (n&0xF);
+        var f = 0x40;if(z)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;},
+    JPnn:   function(p) {p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c += 12;},
+    JRccn:  function(p, cc) {var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
+        if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}
         p.clock.c += 8;},
-    JPccnn: function(p, cc) {console.log('JPccnn');var t=1;var mask=0x10;if (cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
+    JPccnn: function(p, cc) {var t=1;var mask=0x10;if (cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c+=4;}
         p.clock.c += 12;},
-    JPrr:   function(p, r1, r2) {console.log('JPrr');p.r.pc = p.memory[(p.r[r1] << 8) + p.r[r2]];p.clock.c += 4;},
-    Jrn:    function(p) {console.log('Jrn');var v=p.memory[p.r.pc];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;}
+    JPrr:   function(p, r1, r2) {p.r.pc = p.memory[(p.r[r1] << 8) + p.r[r2]];p.clock.c += 4;},
+    JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
+    PUSHrr: function(p, r1, r2) {p.memory[--p.r.sp] = p.r[r1];p.memory[--p.r.sp] = p.r[r2];p.clock.c+=16;},
+    POPrr:  function(p, r1, r2) {p.r[r2] = p.memory[p.r.sp++];p.r[r1] = p.memory[p.r.sp++];p.clock.c+=12;},
+    RSTn:   function(p, n) {p.memory[--p.r.sp]=p.r.pc>>8;p.memory[--p.r.sp]=p.r.pc&0xF;p.r.pc=n;p.clock.c+=16;},
+    RET:    function(p) {p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c += 16;},
+    RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c+=12;}p.clock.c+=8;},
+    CALLnn: function(p) {ops._CALLnn(p); p.clock.c+=24;},
+    CALLccnn:function(p, cc) {if (ops._testFlag(p, cc)){ops._CALLnn(p);p.clock+=12;}p.clock.c+=12; },
+    _CALLnn:function(p){
+        p.memory[--p.r.sp]=((p.r.pc+2)&0xFF00)>>8;p.memory[--p.r.sp]=(p.r.pc+2)&0x00FF;
+        var j=p.memory[p.r.pc]+(p.memory[p.r.pc+1]<<8);p.r.pc=j;},
+    _testFlag: function(p, cc) {
+        var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
+        return (t && p.r.F&mask) || (!t && !(p.r.F&mask));}
 };

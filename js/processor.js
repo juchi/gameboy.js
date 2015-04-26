@@ -276,6 +276,7 @@ var opcodes = {
     0xC8: function(p){ops.RETcc(p, 'Z');},
     0xC9: function(p){ops.RET(p);},
     0xCA: function(p){ops.JPccnn(p, 'Z');},
+    0xCB: function(p){ops.CB(p);},
     0xCC: function(p){ops.CALLccnn(p, 'Z');},
     0xCD: function(p){ops.CALLnn(p);},
     0xCE: function(p){ops.ADCrn(p, 'A');},
@@ -324,6 +325,112 @@ var opcodes = {
     //0xFD empty
     0xFE: function(p){ops.CPn(p);},
     0xFF: function(p){ops.RSTn(p, 0x38);}
+};
+
+var cbmap = {
+    0x08: function(p){ops.RRCr(p, 'B');},
+    0x09: function(p){ops.RRCr(p, 'C');},
+    0x0A: function(p){ops.RRCr(p, 'D');},
+    0x0B: function(p){ops.RRCr(p, 'E');},
+    0x0C: function(p){ops.RRCr(p, 'H');},
+    0x0D: function(p){ops.RRCr(p, 'L');},
+    //0x0E: function(p){ops.RRCrra(p, 'H', 'L');},
+    0x0F: function(p){ops.RRCr(p, 'A');},
+
+    0x18: function(p){ops.RRr(p, 'B');},
+    0x19: function(p){ops.RRr(p, 'C');},
+    0x1A: function(p){ops.RRr(p, 'D');},
+    0x1B: function(p){ops.RRr(p, 'E');},
+    0x1C: function(p){ops.RRr(p, 'H');},
+    0x1D: function(p){ops.RRr(p, 'L');},
+    //0x1E: function(p){ops.RRrra(p, 'H', 'L');},
+    0x1F: function(p){ops.RRr(p, 'A');},
+
+    0x28: function(p){ops.SRAr(p, 'B');},
+    0x29: function(p){ops.SRAr(p, 'C');},
+    0x2A: function(p){ops.SRAr(p, 'D');},
+    0x2B: function(p){ops.SRAr(p, 'E');},
+    0x2C: function(p){ops.SRAr(p, 'H');},
+    0x2D: function(p){ops.SRAr(p, 'L');},
+    0x2F: function(p){ops.SRAr(p, 'A');},
+
+    0x38: function(p){ops.SRLr(p, 'B');},
+    0x39: function(p){ops.SRLr(p, 'C');},
+    0x3A: function(p){ops.SRLr(p, 'D');},
+    0x3B: function(p){ops.SRLr(p, 'E');},
+    0x3C: function(p){ops.SRLr(p, 'H');},
+    0x3D: function(p){ops.SRLr(p, 'L');},
+    0x3F: function(p){ops.SRLr(p, 'A');},
+
+    0x40: function(p){ops.BITir(p, 0, 'B');},
+    0x41: function(p){ops.BITir(p, 0, 'C');},
+    0x42: function(p){ops.BITir(p, 0, 'D');},
+    0x43: function(p){ops.BITir(p, 0, 'E');},
+    0x44: function(p){ops.BITir(p, 0, 'H');},
+    0x45: function(p){ops.BITir(p, 0, 'L');},
+    0x46: function(p){ops.BITir(p, 0, 'B');},
+    0x47: function(p){ops.BITir(p, 0, 'A');},
+    0x48: function(p){ops.BITir(p, 1, 'B');},
+    0x49: function(p){ops.BITir(p, 1, 'C');},
+    0x4A: function(p){ops.BITir(p, 1, 'D');},
+    0x4B: function(p){ops.BITir(p, 1, 'E');},
+    0x4C: function(p){ops.BITir(p, 1, 'H');},
+    0x4D: function(p){ops.BITir(p, 1, 'L');},
+    0x4E: function(p){ops.BITir(p, 1, 'B');},
+    0x4F: function(p){ops.BITir(p, 1, 'A');},
+
+    0x50: function(p){ops.BITir(p, 2, 'B');},
+    0x51: function(p){ops.BITir(p, 2, 'C');},
+    0x52: function(p){ops.BITir(p, 2, 'D');},
+    0x53: function(p){ops.BITir(p, 2, 'E');},
+    0x54: function(p){ops.BITir(p, 2, 'H');},
+    0x55: function(p){ops.BITir(p, 2, 'L');},
+    0x56: function(p){ops.BITir(p, 2, 'B');},
+    0x57: function(p){ops.BITir(p, 2, 'A');},
+    0x58: function(p){ops.BITir(p, 3, 'B');},
+    0x59: function(p){ops.BITir(p, 3, 'C');},
+    0x5A: function(p){ops.BITir(p, 3, 'D');},
+    0x5B: function(p){ops.BITir(p, 3, 'E');},
+    0x5C: function(p){ops.BITir(p, 3, 'H');},
+    0x5D: function(p){ops.BITir(p, 3, 'L');},
+    0x5E: function(p){ops.BITir(p, 3, 'B');},
+    0x5F: function(p){ops.BITir(p, 3, 'A');},
+
+    0x60: function(p){ops.BITir(p, 4, 'B');},
+    0x61: function(p){ops.BITir(p, 4, 'C');},
+    0x62: function(p){ops.BITir(p, 4, 'D');},
+    0x63: function(p){ops.BITir(p, 4, 'E');},
+    0x64: function(p){ops.BITir(p, 4, 'H');},
+    0x65: function(p){ops.BITir(p, 4, 'L');},
+    0x66: function(p){ops.BITir(p, 4, 'B');},
+    0x67: function(p){ops.BITir(p, 4, 'A');},
+    0x68: function(p){ops.BITir(p, 5, 'B');},
+    0x69: function(p){ops.BITir(p, 5, 'C');},
+    0x6A: function(p){ops.BITir(p, 5, 'D');},
+    0x6B: function(p){ops.BITir(p, 5, 'E');},
+    0x6C: function(p){ops.BITir(p, 5, 'H');},
+    0x6D: function(p){ops.BITir(p, 5, 'L');},
+    0x6E: function(p){ops.BITir(p, 5, 'B');},
+    0x6F: function(p){ops.BITir(p, 5, 'A');},
+
+    0x70: function(p){ops.BITir(p, 6, 'B');},
+    0x71: function(p){ops.BITir(p, 6, 'C');},
+    0x72: function(p){ops.BITir(p, 6, 'D');},
+    0x73: function(p){ops.BITir(p, 6, 'E');},
+    0x74: function(p){ops.BITir(p, 6, 'H');},
+    0x75: function(p){ops.BITir(p, 6, 'L');},
+    0x76: function(p){ops.BITir(p, 6, 'B');},
+    0x77: function(p){ops.BITir(p, 6, 'A');},
+    0x78: function(p){ops.BITir(p, 7, 'B');},
+    0x79: function(p){ops.BITir(p, 7, 'C');},
+    0x7A: function(p){ops.BITir(p, 7, 'D');},
+    0x7B: function(p){ops.BITir(p, 7, 'E');},
+    0x7C: function(p){ops.BITir(p, 7, 'H');},
+    0x7D: function(p){ops.BITir(p, 7, 'L');},
+    0x7E: function(p){ops.BITir(p, 7, 'B');},
+    0x7F: function(p){ops.BITir(p, 7, 'A');}
+
+
 };
 
 var ops = {
@@ -380,6 +487,11 @@ var ops = {
     _CPn:   function(p, n) {
         var c = p.r.A < n;var z = p.r.A == n;p.r.A -= n;var h = (p.r.A&0xF) < (n&0xF);
         var f = 0x40;if(z)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;},
+    RRCr:   function(p, r1) {p.r.F=0;var out=p.r[r1] & 0x01;if(out)p.r.F|=0x10;p.r[r1]=(p.r[r1]>>1)|(out*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    RRr:    function(p, r1) {var c=p.r.F&0x10;p.r.F=0;var out=p.r[r1]&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=(p.r[r1]>>1)|(c*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x10)p.r.F|=0x01;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>8)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x10)p.r.F|=0x01;p.r[r1]=p.r[r1]>>8;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    BITir:  function(p, i, r1) {var mask=1<<i;var z=p.r[r1]&mask?1:0;var c=p.r.F&0x10;;var f = 0x20;if(z)f|=0x80;if(c) f|=0x10;p.r.F=f;p.clock.c+=4;},
     JPnn:   function(p) {p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c += 12;},
     JRccn:  function(p, cc) {var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}
@@ -403,6 +515,9 @@ var ops = {
     CCF:    function(p) {p.r.F&=0x9F;p.r.F&0x10?p.r.F&=0xE0:p.r.F|=0x10;p.clock.c += 4;},
     SCF:    function(p) {p.r.F&=0x9F;p.r.F|=0x10;p.clock.c+=4;},
     DAA:    function(p) {},
+    CB:     function(p) {var opcode = p.memory[p.r.pc++];
+        if (!cbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else cbmap[opcode](p);
+        p.clock.c+=4;},
     _testFlag: function(p, cc) {
         var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         return (t && p.r.F&mask) || (!t && !(p.r.F&mask));}

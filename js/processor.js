@@ -101,7 +101,7 @@ var map = {
     0x14: function(p){ops.INCr(p, 'D');},
     0x15: function(p){ops.DECCr(p, 'D');},
     0x16: function(p){ops.LDrn(p, 'D');},
-    0x17: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A<<1)+c;p.clock.c+=4;},
+    0x17: function(p){var c = (p.r.F&0x10)?1:0;p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A<<1)+c;p.clock.c+=4;},
     0x18: function(p){ops.JRn(p);},
     //0x19: function(p){},
     0x1A: function(p){ops.LDrrra(p, 'A', 'D', 'E');},
@@ -109,7 +109,7 @@ var map = {
     0x1C: function(p){ops.INCr(p, 'E');},
     0x1D: function(p){ops.DECr(p, 'E');},
     0x1E: function(p){ops.LDrn(p, 'E');},
-    0x1F: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)|(c*0x80);p.clock.c+=4;},
+    0x1F: function(p){var c = (p.r.F&0x10)?1:0;p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)|(c*0x80);p.clock.c+=4;},
 
     0x20: function(p){ops.JRccn(p, 'NZ');},
     0x21: function(p){ops.LDrrnn(p, 'H', 'L');},
@@ -131,6 +131,7 @@ var map = {
     0x30: function(p){ops.JRccn(p, 'NC');},
     0x31: function(p){ops.LDspnn(p);},
     0x32: function(p){ops.LDrrar(p, 'H', 'L', 'A');ops.DECrr(p, 'H', 'L');p.clock.c -= 8;},
+    0x35: function(p){ops.DECrra(p, 'H', 'L');},
     0x37: function(p){ops.SCF(p);},
     0x38: function(p){ops.JRccn(p, 'C');},
     0x3C: function(p){ops.INCr(p, 'A');},
@@ -368,7 +369,7 @@ var cbmap = {
     0x43: function(p){ops.BITir(p, 0, 'E');},
     0x44: function(p){ops.BITir(p, 0, 'H');},
     0x45: function(p){ops.BITir(p, 0, 'L');},
-    0x46: function(p){ops.BITir(p, 0, 'B');},
+    //0x46: function(p){ops.BITir(p, 0, 'B');},
     0x47: function(p){ops.BITir(p, 0, 'A');},
     0x48: function(p){ops.BITir(p, 1, 'B');},
     0x49: function(p){ops.BITir(p, 1, 'C');},
@@ -376,7 +377,7 @@ var cbmap = {
     0x4B: function(p){ops.BITir(p, 1, 'E');},
     0x4C: function(p){ops.BITir(p, 1, 'H');},
     0x4D: function(p){ops.BITir(p, 1, 'L');},
-    0x4E: function(p){ops.BITir(p, 1, 'B');},
+    //0x4E: function(p){ops.BITir(p, 1, 'B');},
     0x4F: function(p){ops.BITir(p, 1, 'A');},
 
     0x50: function(p){ops.BITir(p, 2, 'B');},
@@ -385,7 +386,7 @@ var cbmap = {
     0x53: function(p){ops.BITir(p, 2, 'E');},
     0x54: function(p){ops.BITir(p, 2, 'H');},
     0x55: function(p){ops.BITir(p, 2, 'L');},
-    0x56: function(p){ops.BITir(p, 2, 'B');},
+    //0x56: function(p){ops.BITir(p, 2, 'B');},
     0x57: function(p){ops.BITir(p, 2, 'A');},
     0x58: function(p){ops.BITir(p, 3, 'B');},
     0x59: function(p){ops.BITir(p, 3, 'C');},
@@ -393,7 +394,7 @@ var cbmap = {
     0x5B: function(p){ops.BITir(p, 3, 'E');},
     0x5C: function(p){ops.BITir(p, 3, 'H');},
     0x5D: function(p){ops.BITir(p, 3, 'L');},
-    0x5E: function(p){ops.BITir(p, 3, 'B');},
+    //0x5E: function(p){ops.BITir(p, 3, 'B');},
     0x5F: function(p){ops.BITir(p, 3, 'A');},
 
     0x60: function(p){ops.BITir(p, 4, 'B');},
@@ -402,7 +403,7 @@ var cbmap = {
     0x63: function(p){ops.BITir(p, 4, 'E');},
     0x64: function(p){ops.BITir(p, 4, 'H');},
     0x65: function(p){ops.BITir(p, 4, 'L');},
-    0x66: function(p){ops.BITir(p, 4, 'B');},
+    //0x66: function(p){ops.BITir(p, 4, 'B');},
     0x67: function(p){ops.BITir(p, 4, 'A');},
     0x68: function(p){ops.BITir(p, 5, 'B');},
     0x69: function(p){ops.BITir(p, 5, 'C');},
@@ -410,7 +411,7 @@ var cbmap = {
     0x6B: function(p){ops.BITir(p, 5, 'E');},
     0x6C: function(p){ops.BITir(p, 5, 'H');},
     0x6D: function(p){ops.BITir(p, 5, 'L');},
-    0x6E: function(p){ops.BITir(p, 5, 'B');},
+    //0x6E: function(p){ops.BITir(p, 5, 'B');},
     0x6F: function(p){ops.BITir(p, 5, 'A');},
 
     0x70: function(p){ops.BITir(p, 6, 'B');},
@@ -419,7 +420,7 @@ var cbmap = {
     0x73: function(p){ops.BITir(p, 6, 'E');},
     0x74: function(p){ops.BITir(p, 6, 'H');},
     0x75: function(p){ops.BITir(p, 6, 'L');},
-    0x76: function(p){ops.BITir(p, 6, 'B');},
+    //0x76: function(p){ops.BITir(p, 6, 'B');},
     0x77: function(p){ops.BITir(p, 6, 'A');},
     0x78: function(p){ops.BITir(p, 7, 'B');},
     0x79: function(p){ops.BITir(p, 7, 'C');},
@@ -427,7 +428,7 @@ var cbmap = {
     0x7B: function(p){ops.BITir(p, 7, 'E');},
     0x7C: function(p){ops.BITir(p, 7, 'H');},
     0x7D: function(p){ops.BITir(p, 7, 'L');},
-    0x7E: function(p){ops.BITir(p, 7, 'B');},
+    //0x7E: function(p){ops.BITir(p, 7, 'B');},
     0x7F: function(p){ops.BITir(p, 7, 'A');}
 
 
@@ -454,6 +455,10 @@ var ops = {
     DECr:   function(p, r1) {var h = (p.r[r1]&0xF) < 1;p.r[r1] = (p.r[r1] - 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},
+    DECrra: function(p, r1, r2){var addr = (p.r[r1] << 8)+ p.r[r2];var val = p.memory[addr]-1;var z = val==0;var h=(p.memory[addr]&0xF) < 1;
+        p.memory.wb(addr, val);
+        p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
+        p.clock.c+=12;},
     ADDrr:  function(p, r1, r2) {var n = p.r[r2];ops._ADDrn(p, r1, n); p.clock.c += 4;},
     ADDrn:  function(p, r1) {var n = p.memory[p.r.pc++];ops._ADDrn(p, r1, n); p.clock.c+=8;},
     _ADDrn: function(p, r1, n) {var h=((p.r[r1]&0xF)+(n&0xF))&0x10;p.r[r1]+=n;var c=p.r[r1]&0x100;p.r[r1]&=255;
@@ -463,8 +468,7 @@ var ops = {
     _ADCrn: function(p, r1, n) {
         var c = p.r.F&0x10?1:0;var h=((p.r[r1]&0xF)+(n&0xF)+c)&0x10;
         p.r[r1]+=n+c;c=p.r[r1]&0x100;p.r[r1]&=255;
-        var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
-    },
+        var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
     ADCrrra:function(p, r1, r2, r3) {var n = p.memory[(p.r[r2] << 8)+ p.r[r3]]; ops._ADCrn(p, r1, n); p.clock.c += 8;},
     ADDrrra:function(p, r1, r2, r3) {var v = p.memory[(p.r[r2] << 8)+ p.r[r3]];var h=((p.r[r1]&0xF)+(v&0xF))&0x10;p.r[r1]+=v;var c=p.r[r1]&0x100;p.r[r1]&=255;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;
@@ -488,9 +492,9 @@ var ops = {
         var c = p.r.A < n;var z = p.r.A == n;p.r.A -= n;var h = (p.r.A&0xF) < (n&0xF);
         var f = 0x40;if(z)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;},
     RRCr:   function(p, r1) {p.r.F=0;var out=p.r[r1] & 0x01;if(out)p.r.F|=0x10;p.r[r1]=(p.r[r1]>>1)|(out*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    RRr:    function(p, r1) {var c=p.r.F&0x10;p.r.F=0;var out=p.r[r1]&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=(p.r[r1]>>1)|(c*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x10)p.r.F|=0x01;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>8)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x10)p.r.F|=0x01;p.r[r1]=p.r[r1]>>8;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    RRr:    function(p, r1) {var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.r[r1]&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=(p.r[r1]>>1)|(c*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>8)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;p.r[r1]=p.r[r1]>>8;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     BITir:  function(p, i, r1) {var mask=1<<i;var z=p.r[r1]&mask?1:0;var c=p.r.F&0x10;;var f = 0x20;if(z)f|=0x80;if(c) f|=0x10;p.r.F=f;p.clock.c+=4;},
     JPnn:   function(p) {p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c += 12;},
     JRccn:  function(p, cc) {var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
@@ -499,7 +503,7 @@ var ops = {
     JPccnn: function(p, cc) {var t=1;var mask=0x10;if (cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c+=4;}else{p.r.pc+=2;}
         p.clock.c += 12;},
-    JPrr:   function(p, r1, r2) {p.r.pc = p.memory[(p.r[r1] << 8) + p.r[r2]];p.clock.c += 4;},
+    JPrr:   function(p, r1, r2) {p.r.pc = (p.r[r1] << 8) + p.r[r2];p.clock.c += 4;},
     JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
     PUSHrr: function(p, r1, r2) {p.memory.wb(--p.r.sp, p.r[r1]);p.memory.wb(--p.r.sp, p.r[r2]);p.clock.c+=16;},
     POPrr:  function(p, r1, r2) {p.r[r2] = p.memory[p.r.sp++];p.r[r1] = p.memory[p.r.sp++];p.clock.c+=12;},

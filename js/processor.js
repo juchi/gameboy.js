@@ -14,8 +14,12 @@ var Processor = function() {
     }
 
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
-    this.clock = {c: 0};
-    this.memory = new Memory();
+    this.clock = {c: 0, serial: 0};
+    this.memory = new Memory(this);
+    this.interruptEnable = true;
+    this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
+    this.enableSerial = 0;
+    this.serialHandler = {out:function(data) {console.log('serial: '+String.fromCharCode(data)+'('+data+')' );}, in:function(){return 0xFF;}};
 };
 
 Processor.prototype.reset = function() {
@@ -49,6 +53,13 @@ Processor.prototype.frame = function() {
             continue;
         }
         map[opcode](this);
+        if (this.enableSerial) {
+            var instr = this.clock.c - oldInstrCount;
+            this.clock.serial += instr;
+            if (this.clock.serial >= 8 * this.SERIAL_INTERNAL_INSTR) {
+                this.endSerialTransfer();
+            }
+        }
     }
     this.screen.drawFrame();
 
@@ -74,6 +85,19 @@ Processor.prototype.interrupt = function(type) {
 
 Processor.prototype.isInterruptEnable = function(type) {
     return true;
+};
+
+Processor.prototype.enableSerialTransfer = function() {
+    this.enableSerial = 1;
+    this.clock.serial = 0;
+};
+
+Processor.prototype.endSerialTransfer = function() {
+    this.enableSerial = 0;
+    var data = this.memory[0xFF01];
+    this.memory.wb(0xFF02, 0);
+    this.serialHandler.out(data);
+    this.memory.wb(this.serialHandler.in());
 };
 
 var map = {

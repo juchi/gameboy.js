@@ -1,4 +1,4 @@
-var Memory = function() {
+var Memory = function(cpu) {
     this.addresses = {
         VRAM_START : 0x8000,
         VRAM_END   : 0x9FFF,
@@ -14,8 +14,9 @@ var Memory = function() {
 
     this.romBankNumber = 0;
     this.MBCtype = 0;
-    this.banksize = 0x3FFF;
+    this.banksize = 0x4000;
     this.rom = null;
+    this.cpu = cpu;
 };
 
 Memory.prototype = new Array();
@@ -67,6 +68,12 @@ Memory.prototype.wb = function(addr, value) {
             this.romBankNumber = (this.romBankNumber&0xE0) +value;
             this.loadRomBank(this.romBankNumber);
             break;
+        case 0xF000:
+            if (addr == 0xFF02) {
+                if (value & 0x80) {
+                    this.cpu.enableSerialTransfer();
+                }
+            }
         default:
             this[addr] = value;
     }

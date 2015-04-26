@@ -42,13 +42,13 @@ Processor.prototype.frame = function() {
 
     while (this.clock.c < maxInstructions) {
         var opcode = this.memory[this.r.pc++];
-        if (!opcodes[opcode]) {
+        if (!map[opcode]) {
             skipped++;
             if (skipped && opcode) {console.log('skip '+opcode.toString(16)+' at '+(this.r.pc-1).toString(16));}
             this.clock.c += 4;
             continue;
         }
-        opcodes[opcode](this);
+        map[opcode](this);
     }
     this.screen.drawFrame();
 
@@ -76,7 +76,7 @@ Processor.prototype.isInterruptEnable = function(type) {
     return true;
 };
 
-var opcodes = {
+var map = {
     0x00: function(p){p.clock.c += 4;},
     0x01: function(p){ops.LDrrnn(p, 'B', 'C');},
     0x02: function(p){ops.LDrrar(p, 'B', 'C', 'A');},

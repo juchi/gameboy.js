@@ -92,9 +92,9 @@ var opcodes = {
     0x0C: function(p){ops.INCr(p, 'C');},
     0x0D: function(p){ops.DECr(p, 'C');},
     0x0E: function(p){ops.LDrn(p, 'C');},
-    0x0F: function(p){p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)&(out*0x80);p.clock.c+=4;},
+    0x0F: function(p){p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)|(out*0x80);p.clock.c+=4;},
 
-    0x10: function(p){p.clock.c+=4;},
+    0x10: function(p){p.r.pc++;p.clock.c+=4;},
     0x11: function(p){ops.LDrrnn(p, 'D', 'E');},
     0x12: function(p){ops.LDrrar(p, 'D', 'E', 'A');},
     0x13: function(p){ops.INCrr(p, 'D', 'E');},
@@ -109,7 +109,7 @@ var opcodes = {
     0x1C: function(p){ops.INCr(p, 'E');},
     0x1D: function(p){ops.DECr(p, 'E');},
     0x1E: function(p){ops.LDrn(p, 'E');},
-    0x1F: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)&(c*0x80);p.clock.c+=4;},
+    0x1F: function(p){var c = p.r.F&0x10;p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)|(c*0x80);p.clock.c+=4;},
 
     0x20: function(p){ops.JRccn(p, 'NZ');},
     0x21: function(p){ops.LDrrnn(p, 'H', 'L');},
@@ -385,7 +385,7 @@ var ops = {
         if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}
         p.clock.c += 8;},
     JPccnn: function(p, cc) {var t=1;var mask=0x10;if (cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
-        if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c+=4;}
+        if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c+=4;}else{p.r.pc+=2;}
         p.clock.c += 12;},
     JPrr:   function(p, r1, r2) {p.r.pc = p.memory[(p.r[r1] << 8) + p.r[r2]];p.clock.c += 4;},
     JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
@@ -395,7 +395,7 @@ var ops = {
     RET:    function(p) {p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c += 16;},
     RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c+=12;}p.clock.c+=8;},
     CALLnn: function(p) {ops._CALLnn(p); p.clock.c+=24;},
-    CALLccnn:function(p, cc) {if (ops._testFlag(p, cc)){ops._CALLnn(p);p.clock+=12;}p.clock.c+=12; },
+    CALLccnn:function(p, cc) {if (ops._testFlag(p, cc)){ops._CALLnn(p);p.clock.c+=12;}else{p.r.pc+=2;}p.clock.c+=12; },
     _CALLnn:function(p){
         p.memory[--p.r.sp]=((p.r.pc+2)&0xFF00)>>8;p.memory[--p.r.sp]=(p.r.pc+2)&0x00FF;
         var j=p.memory[p.r.pc]+(p.memory[p.r.pc+1]<<8);p.r.pc=j;},

@@ -31,7 +31,6 @@ var Screen = function(canvas, cpu) {
 };
 
 Screen.prototype.drawFrame = function() {
-    var d1 = new Date();
 
     this.clearScreen();
     this.LCDC = this.deviceram(0xFF40);
@@ -40,8 +39,6 @@ Screen.prototype.drawFrame = function() {
         this.drawBackground();
         this.drawWindow();
     }
-    var d2 = new Date();
-    console.log('frame time '+(d2.getTime() - d1.getTime()));
 };
 
 Screen.prototype.drawBackground = function() {

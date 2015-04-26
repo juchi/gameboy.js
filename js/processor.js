@@ -48,10 +48,10 @@ Processor.prototype.frame = function() {
         var opcode = this.memory[this.r.pc++];
         if (!map[opcode]) {
             skipped++;
-            if (skipped && opcode) {console.log('skip '+opcode.toString(16)+' at '+(this.r.pc-1).toString(16));}
             this.clock.c += 4;
             continue;
         }
+        var oldInstrCount = this.clock.c;
         map[opcode](this);
         if (this.enableSerial) {
             var instr = this.clock.c - oldInstrCount;
@@ -63,7 +63,6 @@ Processor.prototype.frame = function() {
     }
     this.screen.drawFrame();
 
-    console.log('end frame - '+skipped+' instructions skipped');
 };
 
 Processor.prototype.timer = function() {

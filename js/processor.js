@@ -37,19 +37,22 @@ Processor.prototype.run = function() {
     this.frame();
 };
 
+Processor.prototype.stop = function() {
+    clearTimeout(this.nextFrameTimer);
+};
+
 Processor.prototype.frame = function() {
     this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / this.screen.FREQUENCY);
 
     var maxInstructions = 70224;
     this.clock.c = 0;
-    var skipped = 0;
 
     while (this.clock.c < maxInstructions) {
         var opcode = this.memory[this.r.pc++];
         if (!map[opcode]) {
-            skipped++;
-            this.clock.c += 4;
-            continue;
+            console.error('Unknown opcode '+opcode+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
+            this.stop();
+            return;
         }
         var oldInstrCount = this.clock.c;
         map[opcode](this);

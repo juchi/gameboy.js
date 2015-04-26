@@ -328,16 +328,16 @@ var opcodes = {
 
 var ops = {
     LDrrnn: function(p, r1, r2) {p.r[r2] = p.memory[p.r.pc];p.r[r1] = p.memory[p.r.pc+1]; p.r.pc+=2;p.clock.c += 12;},
-    LDrrar: function(p, r1, r2, r3) {p.memory[(p.r[r1] << 8)+ p.r[r2]]=p.r[r3];p.clock.c += 8;},
+    LDrrar: function(p, r1, r2, r3) {p.memory.wb((p.r[r1] << 8)+ p.r[r2],p.r[r3]);p.clock.c += 8;},
     LDrrra: function(p, r1, r2, r3) {p.r[r1] = p.memory[(p.r[r2] << 8)+ p.r[r3]];p.clock.c += 8;},
     LDrn:   function(p, r1) {p.r[r1] = p.memory[p.r.pc++];p.clock.c += 8;},
     LDrr:   function(p, r1, r2) {p.r[r1] = p.r[r2];p.clock.c += 4;},
-    LDrar:  function(p, r1, r2) {p.memory[p.r[r1]+0xFF] = p.r[r2];p.r.pc++;p.clock.c += 8;},
+    LDrar:  function(p, r1, r2) {p.memory.wb(p.r[r1]+0xFF, p.r[r2]);p.r.pc++;p.clock.c += 8;},
     LDrra:  function(p, r1, r2) {p.r[r1] = p.memory[p.r[r2]+0xFF];p.r.pc++;p.clock.c += 8;},
     LDspnn: function(p){p.r.sp = (p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r.pc+=2;p.clock.c += 12;},
-    LDnnar: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory[addr]=p.r[r1];p.r.pc+=2; p.clock.c += 16;},
+    LDnnar: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r[r1]=p.memory[addr];p.r.pc+=2; p.clock.c += 16;},
-    LDHnar: function(p, r1){p.memory[0xFF00 + p.memory[p.r.pc++]] = p.r[r1];p.clock.c+=12;},
+    LDHnar: function(p, r1){p.memory.wb(0xFF00 + p.memory[p.r.pc++],p.r[r1]);p.clock.c+=12;},
     LDHrna: function(p, r1){p.r[r1]=p.memory[0xFF00 + p.memory[p.r.pc++]];p.clock.c+=12;},
     INCrr:  function(p, r1, r2) {p.r[r2]=(p.r[r2]+1)&255; p.r[r2] == 0 ? p.r[r1] = (p.r[r1]+1)&255:null;p.clock.c += 8;},
     INCr:   function(p, r1) {var h = (p.r[r1]&0xF + 1)&0x10;p.r[r1] = (p.r[r1] + 1) & 255;var z = p.r[r1]==0;
@@ -389,15 +389,15 @@ var ops = {
         p.clock.c += 12;},
     JPrr:   function(p, r1, r2) {p.r.pc = p.memory[(p.r[r1] << 8) + p.r[r2]];p.clock.c += 4;},
     JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
-    PUSHrr: function(p, r1, r2) {p.memory[--p.r.sp] = p.r[r1];p.memory[--p.r.sp] = p.r[r2];p.clock.c+=16;},
+    PUSHrr: function(p, r1, r2) {p.memory.wb(--p.r.sp, p.r[r1]);p.memory.wb(--p.r.sp, p.r[r2]);p.clock.c+=16;},
     POPrr:  function(p, r1, r2) {p.r[r2] = p.memory[p.r.sp++];p.r[r1] = p.memory[p.r.sp++];p.clock.c+=12;},
-    RSTn:   function(p, n) {p.memory[--p.r.sp]=p.r.pc>>8;p.memory[--p.r.sp]=p.r.pc&0xF;p.r.pc=n;p.clock.c+=16;},
+    RSTn:   function(p, n) {p.memory.wb(--p.r.sp,p.r.pc>>8);p.memory.wb(--p.r.sp,p.r.pc&0xF);p.r.pc=n;p.clock.c+=16;},
     RET:    function(p) {p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c += 16;},
     RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c+=12;}p.clock.c+=8;},
     CALLnn: function(p) {ops._CALLnn(p); p.clock.c+=24;},
     CALLccnn:function(p, cc) {if (ops._testFlag(p, cc)){ops._CALLnn(p);p.clock.c+=12;}else{p.r.pc+=2;}p.clock.c+=12; },
     _CALLnn:function(p){
-        p.memory[--p.r.sp]=((p.r.pc+2)&0xFF00)>>8;p.memory[--p.r.sp]=(p.r.pc+2)&0x00FF;
+        p.memory.wb(--p.r.sp, ((p.r.pc+2)&0xFF00)>>8);p.memory.wb(--p.r.sp,(p.r.pc+2)&0x00FF);
         var j=p.memory[p.r.pc]+(p.memory[p.r.pc+1]<<8);p.r.pc=j;},
     CPL:    function(p) {p.r.A = ~p.r.A;p.r.F|=0x60,p.clock.c += 4;},
     CCF:    function(p) {p.r.F&=0x9F;p.r.F&0x10?p.r.F&=0xE0:p.r.F|=0x10;p.clock.c += 4;},

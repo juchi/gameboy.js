@@ -111,7 +111,7 @@ var map = {
     0x05: function(p){ops.DECr(p, 'B');},
     0x06: function(p){ops.LDrn(p, 'B');},
     0x07: function(p){p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=((p.r.A<<1)+out)&0xFF;p.clock.c+=4;},
-    //0x08: function(p){},
+    0x08: function(p){ops.LDnnsp(p);},
     0x09: function(p){ops.ADDrrrr(p, 'H', 'L', 'B', 'C');},
     0x0A: function(p){ops.LDrrra(p, 'A', 'B', 'C');},
     0x0B: function(p){ops.DECrr(p, 'B', 'C');},
@@ -157,9 +157,14 @@ var map = {
     0x30: function(p){ops.JRccn(p, 'NC');},
     0x31: function(p){ops.LDspnn(p);},
     0x32: function(p){ops.LDrrar(p, 'H', 'L', 'A');ops.DECrr(p, 'H', 'L');p.clock.c -= 8;},
+    0x33: function(p){ops.INCsp(p);},
     0x35: function(p){ops.DECrra(p, 'H', 'L');},
+    0x36: function(p){ops.LDrran(p, 'H', 'L');},
     0x37: function(p){ops.SCF(p);},
     0x38: function(p){ops.JRccn(p, 'C');},
+    //0x39: function(p){ops.ADDrrsp(p, 'H', 'L');},
+    0x3A: function(p){ops.LDrrra(p, 'A', 'H', 'L');ops.DECrr(p, 'H', 'L');p.clock.c -= 8;},
+    0x3B: function(p){ops.DECsp(p);},
     0x3C: function(p){ops.INCr(p, 'A');},
     0x3D: function(p){ops.DECr(p, 'A');},
     0x3E: function(p){ops.LDrn(p, 'A');},
@@ -347,6 +352,8 @@ var map = {
     0xF5: function(p){ops.PUSHrr(p, 'A', 'F');},
     0xF6: function(p){ops.ORn(p);},
     0xF7: function(p){ops.RSTn(p, 0x30);},
+    0xF8: function(p){ops.LDrrspn(p, 'H', 'L');},
+    0xF9: function(p){ops.LDsprr(p, 'H', 'L');},
     0xFA: function(p){ops.LDrnna(p, 'A');},
     //0xFC empty
     //0xFD empty
@@ -462,22 +469,29 @@ var cbmap = {
 
 var ops = {
     LDrrnn: function(p, r1, r2) {p.r[r2] = p.memory[p.r.pc];p.r[r1] = p.memory[p.r.pc+1]; p.r.pc+=2;p.clock.c += 12;},
-    LDrrar: function(p, r1, r2, r3) {p.memory.wb((p.r[r1] << 8)+ p.r[r2],p.r[r3]);p.clock.c += 8;},
+    LDrrar: function(p, r1, r2, r3) {ops._LDav(p, (p.r[r1] << 8)+ p.r[r2], p.r[r3]);p.clock.c += 8;},
     LDrrra: function(p, r1, r2, r3) {p.r[r1] = p.memory[(p.r[r2] << 8)+ p.r[r3]];p.clock.c += 8;},
     LDrn:   function(p, r1) {p.r[r1] = p.memory[p.r.pc++];p.clock.c += 8;},
     LDrr:   function(p, r1, r2) {p.r[r1] = p.r[r2];p.clock.c += 4;},
     LDrar:  function(p, r1, r2) {p.memory.wb(p.r[r1]+0xFF, p.r[r2]);p.r.pc++;p.clock.c += 8;},
     LDrra:  function(p, r1, r2) {p.r[r1] = p.memory[p.r[r2]+0xFF];p.r.pc++;p.clock.c += 8;},
     LDspnn: function(p){p.r.sp = (p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r.pc+=2;p.clock.c += 12;},
+    LDsprr: function(p, r1, r2){p.r.sp = (p.memory[p.r[r1]] << 8) + p.memory[p.r[r2]];p.clock.c += 8;},
     LDnnar: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r[r1]=p.memory[addr];p.r.pc+=2; p.clock.c += 16;},
+    LDrrspn:function(p, r1, r2){var val = p.r.sp + p.memory[p.r.cp++]; p.r[r1] = val >> 8;p.r[r2] = val&0xFF;p.clock.c+=12;},
+    LDnnsp: function(p){ops._LDav(p, p.memory[p.r.pc++] + (p.memory[p.r.pc++]<<8), p.r.sp);p.clock.c+=20;},
+    LDrran: function(p, r1, r2){var addr = (p.r[r1] << 8)+ p.r[r2];ops._LDav(p, addr, p.memory[p.r.pc++]);p.clock.c+=12;},
+    _LDav:  function(p, addr, val){p.memory.wb(addr, val);},
     LDHnar: function(p, r1){p.memory.wb(0xFF00 + p.memory[p.r.pc++],p.r[r1]);p.clock.c+=12;},
     LDHrna: function(p, r1){p.r[r1]=p.memory[0xFF00 + p.memory[p.r.pc++]];p.clock.c+=12;},
     INCrr:  function(p, r1, r2) {p.r[r2]=(p.r[r2]+1)&255; p.r[r2] == 0 ? p.r[r1] = (p.r[r1]+1)&255:null;p.clock.c += 8;},
+    INCsp:  function(p){p.r.sp++; p.r.sp &= 0xFF; p.clock.c+=8;},
     INCr:   function(p, r1) {var h = (p.r[r1]&0xF + 1)&0x10;p.r[r1] = (p.r[r1] + 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},
     DECrr:  function(p, r1, r2) {p.r[r2] = (p.r[r2] - 1) & 255; if (p.r[r2] == 255) p.r[r1] = (p.r[r1] - 1) & 255;p.clock.c += 8;},
+    DECsp:  function(p){p.r.sp++; p.r.sp &= 0xFF; p.clock.c+=8;},
     DECr:   function(p, r1) {var h = (p.r[r1]&0xF) < 1;p.r[r1] = (p.r[r1] - 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},

@@ -1,10 +1,18 @@
 var Processor = function() {
 
     this.INTERRUPTS = {
-        TIMER: 2
+        VBLANK: 0,
+        LCDC:   1,
+        TIMER:  2,
+        SERIAL: 3,
+        HILO:   4
     };
     this.interruptRoutines = {
-        2: timerInterrupt
+        0: function(p){ops.RSTn(p, 0x40);},
+        1: function(p){ops.RSTn(p, 0x48);},
+        2: function(p){ops.RSTn(p, 0x50);},
+        3: function(p){ops.RSTn(p, 0x58);},
+        4: function(p){ops.RSTn(p, 0x60);}
     };
 
     var proc = this;
@@ -63,6 +71,7 @@ Processor.prototype.frame = function() {
                 this.endSerialTransfer();
             }
         }
+        this.checkInterrupt();
     }
     this.screen.drawFrame();
 
@@ -79,14 +88,34 @@ Processor.prototype.timer = function() {
     this.interrupt(this.INTERRUPTS.TIMER);
 };
 
+Processor.prototype.checkInterrupt = function() {
+    if (!this.interruptEnable) {
+        return;
+    }
+    for (var i = 0; i < 5; i++) {
+        if (this.memory[0xFF0F] & (1<<i)) {
+            this.memory[0xFF0F] &= (0xFF - (1<<i));
+            this.disableInterrupts();
+            this.interruptRoutines[i](this);
+        }
+    }
+};
+
 Processor.prototype.interrupt = function(type) {
     if (this.isInterruptEnable(type)) {
-        this.interruptRoutines[type]();
+        this.memory[0xFF0F] |= (1 << type);
     }
 };
 
 Processor.prototype.isInterruptEnable = function(type) {
-    return true;
+    return this.memory[0xFFFF]&(1<<type) != 0;
+};
+
+Processor.prototype.enableInterrupts = function() {
+    this.interruptEnable = true;
+};
+Processor.prototype.disableInterrupts = function() {
+    this.interruptEnable = false;
 };
 
 Processor.prototype.enableSerialTransfer = function() {
@@ -323,6 +352,7 @@ var map = {
     0xD6: function(p){ops.SUBn(p);},
     0xD7: function(p){ops.RSTn(p, 0x10);},
     0xD8: function(p){ops.RETcc(p, 'C');},
+    0xD9: function(p){ops.RETI(p);},
     0xDA: function(p){ops.JPccnn(p, 'C');},
     //0xDB empty
     0xDC: function(p){ops.CALLccnn(p, 'C');},
@@ -348,6 +378,7 @@ var map = {
     0xF0: function(p){ops.LDHrna(p, 'A');},
     0xF1: function(p){ops.POPrr(p, 'A', 'F');},
     0xF2: function(p){ops.LDrra(p, 'A', 'C');},
+    0xF3: function(p){ops.DI(p);},
     //0xF4 empty
     0xF5: function(p){ops.PUSHrr(p, 'A', 'F');},
     0xF6: function(p){ops.ORn(p);},
@@ -355,6 +386,7 @@ var map = {
     0xF8: function(p){ops.LDrrspn(p, 'H', 'L');},
     0xF9: function(p){ops.LDsprr(p, 'H', 'L');},
     0xFA: function(p){ops.LDrnna(p, 'A');},
+    0xFB: function(p){ops.EI(p);},
     //0xFC empty
     //0xFD empty
     0xFE: function(p){ops.CPn(p);},
@@ -563,6 +595,9 @@ var ops = {
     CCF:    function(p) {p.r.F&=0x9F;p.r.F&0x10?p.r.F&=0xE0:p.r.F|=0x10;p.clock.c += 4;},
     SCF:    function(p) {p.r.F&=0x9F;p.r.F|=0x10;p.clock.c+=4;},
     DAA:    function(p) {},
+    DI:     function(p) {p.disableInterrupts();p.clock.c += 4;},
+    EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
+    RETI:   function(p) {p.enableInterrupts();ops.RET(p);},
     CB:     function(p) {var opcode = p.memory[p.r.pc++];
         if (!cbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else cbmap[opcode](p);
         p.clock.c+=4;},

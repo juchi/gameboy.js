@@ -5,10 +5,10 @@ var Screen = function(canvas, cpu) {
     this.PIXELSIZE = 2;
     this.FREQUENCY = 60;
     this.colors = [
-        '#000',
-        '#555',
+        '#FFF',
         '#AAA',
-        '#FFF'
+        '#555',
+        '#000'
     ];
     this.SCY = 0xFF42;
     this.SCX = 0xFF43;

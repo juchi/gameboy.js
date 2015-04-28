@@ -420,6 +420,14 @@ var cbmap = {
     0x2D: function(p){ops.SRAr(p, 'L');},
     0x2F: function(p){ops.SRAr(p, 'A');},
 
+    0x30: function(p){ops.SWAPr(p, 'B');},
+    0x31: function(p){ops.SWAPr(p, 'C');},
+    0x32: function(p){ops.SWAPr(p, 'D');},
+    0x33: function(p){ops.SWAPr(p, 'E');},
+    0x34: function(p){ops.SWAPr(p, 'H');},
+    0x35: function(p){ops.SWAPr(p, 'L');},
+    0x36: function(p){ops.SWAPrra(p, 'H', 'L');},
+    0x37: function(p){ops.SWAPr(p, 'A');},
     0x38: function(p){ops.SRLr(p, 'B');},
     0x39: function(p){ops.SRLr(p, 'C');},
     0x3A: function(p){ops.SRLr(p, 'D');},
@@ -572,6 +580,9 @@ var ops = {
     SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>8)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;p.r[r1]=p.r[r1]>>8;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     BITir:  function(p, i, r1) {var mask=1<<i;var z=p.r[r1]&mask?1:0;var c=p.r.F&0x10;;var f = 0x20;if(z)f|=0x80;if(c) f|=0x10;p.r.F=f;p.clock.c+=4;},
+    SWAPr:  function(p, r1) {p.r[r1] = ops._SWAPn(p, p.r[r1]);p.clock.c+=8;},
+    SWAPrra:function(p, r1, r2){var addr = (p.r[r1] << 8)+ p.r[r2]; p.memory.wb(addr, ops._SWAPn(p, p.memory[addr])); p.clock.c+=16;},
+    _SWAPn: function(p, n){p.r.F = n==0?0x80:0;return ((n&0xF0) >> 4) | ((n&0x0F) << 4);},
     JPnn:   function(p) {p.r.pc = (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc];p.clock.c += 12;},
     JRccn:  function(p, cc) {var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         if ((t && p.r.F&mask) || (!t && !(p.r.F&mask))){var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}

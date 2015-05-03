@@ -58,12 +58,13 @@ Processor.prototype.frame = function() {
     while (this.clock.c < maxInstructions) {
         var opcode = this.memory[this.r.pc++];
         if (!map[opcode]) {
-            console.error('Unknown opcode '+opcode+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
+            console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
             this.stop();
             return;
         }
         var oldInstrCount = this.clock.c;
         map[opcode](this);
+        this.r.F &= 0xF0; // tmp fix
         if (this.enableSerial) {
             var instr = this.clock.c - oldInstrCount;
             this.clock.serial += instr;
@@ -191,7 +192,7 @@ var map = {
     0x36: function(p){ops.LDrran(p, 'H', 'L');},
     0x37: function(p){ops.SCF(p);},
     0x38: function(p){ops.JRccn(p, 'C');},
-    //0x39: function(p){ops.ADDrrsp(p, 'H', 'L');},
+    0x39: function(p){ops.ADDrrsp(p, 'H', 'L');},
     0x3A: function(p){ops.LDrrra(p, 'A', 'H', 'L');ops.DECrr(p, 'H', 'L');p.clock.c -= 8;},
     0x3B: function(p){ops.DECsp(p);},
     0x3C: function(p){ops.INCr(p, 'A');},
@@ -519,7 +520,7 @@ var ops = {
     LDsprr: function(p, r1, r2){p.r.sp = (p.memory[p.r[r1]] << 8) + p.memory[p.r[r2]];p.clock.c += 8;},
     LDnnar: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1){var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.r[r1]=p.memory[addr];p.r.pc+=2; p.clock.c += 16;},
-    LDrrspn:function(p, r1, r2){var val = p.r.sp + p.memory[p.r.cp++]; p.r[r1] = val >> 8;p.r[r2] = val&0xFF;p.clock.c+=12;},
+    LDrrspn:function(p, r1, r2){var rel = p.memory[p.r.pc++];rel=rel&0x80?rel-256:rel;var val=p.r.sp + rel;p.r[r1] = val >> 8;p.r[r2] = val&0xFF;p.clock.c+=12;},
     LDnnsp: function(p){ops._LDav(p, p.memory[p.r.pc++] + (p.memory[p.r.pc++]<<8), p.r.sp);p.clock.c+=20;},
     LDrran: function(p, r1, r2){var addr = (p.r[r1] << 8)+ p.r[r2];ops._LDav(p, addr, p.memory[p.r.pc++]);p.clock.c+=12;},
     _LDav:  function(p, addr, val){p.memory.wb(addr, val);},
@@ -543,10 +544,12 @@ var ops = {
     ADDrn:  function(p, r1) {var n = p.memory[p.r.pc++];ops._ADDrn(p, r1, n); p.clock.c+=8;},
     _ADDrn: function(p, r1, n) {var h=((p.r[r1]&0xF)+(n&0xF))&0x10;p.r[r1]+=n;var c=p.r[r1]&0x100;p.r[r1]&=255;
             var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
-    ADDrrrr:function(p, r1, r2, r3, r4) {var v1 = (p.r[r1]<<8) + p.r[r2];var v2 = (p.r[r3]<<8) + p.r[r4];
+    ADDrrrr:function(p, r1, r2, r3, r4) {ops._ADDrrn(p, r1, r2, (p.r[r3]<<8) + p.r[r4]); p.clock.c+=8;},
+    ADDrrsp:function(p, r1, r2) {ops._ADDrrn(p, r1, r2, p.r.sp); p.clock.c += 8;},
+    _ADDrrn:function(p, r1, r2, n) {var v1 = (p.r[r1]<<8) + p.r[r2];v2 = n;
         var res = v1 + v2;var c = res&0x10000;var h = ((v1&0xFFF) + (v2&0xFFF))&0x1000;var z = p.r.F&0x80;
         res&=0xFFFF;p.r[r2]=res&0xFF;res=res>>8;p.r[r1]=res&0xFF;
-        var f=0;if(z)f|=0x80;if(h)f|=0x20;if(c)f|=0x10;p.r.F=f; p.clock.c+=8;},
+        var f=0;if(z)f|=0x80;if(h)f|=0x20;if(c)f|=0x10;p.r.F=f;},
     ADCrr:  function(p, r1, r2) {var n = p.r[r2]; ops._ADCrn(p, r1, n); p.clock.c += 4;},
     ADCrn:  function(p, r1) {var n = p.memory[p.r.pc++]; ops._ADCrn(p, r1, n); p.clock.c += 8;},
     _ADCrn: function(p, r1, n) {
@@ -594,7 +597,7 @@ var ops = {
     JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
     PUSHrr: function(p, r1, r2) {p.memory.wb(--p.r.sp, p.r[r1]);p.memory.wb(--p.r.sp, p.r[r2]);p.clock.c+=16;},
     POPrr:  function(p, r1, r2) {p.r[r2] = p.memory[p.r.sp++];p.r[r1] = p.memory[p.r.sp++];p.clock.c+=12;},
-    RSTn:   function(p, n) {p.memory.wb(--p.r.sp,p.r.pc>>8);p.memory.wb(--p.r.sp,p.r.pc&0xF);p.r.pc=n;p.clock.c+=16;},
+    RSTn:   function(p, n) {p.memory.wb(--p.r.sp,p.r.pc>>8);p.memory.wb(--p.r.sp,p.r.pc&0xFF);p.r.pc=n;p.clock.c+=16;},
     RET:    function(p) {p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c += 16;},
     RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c+=12;}p.clock.c+=8;},
     CALLnn: function(p) {ops._CALLnn(p); p.clock.c+=24;},

@@ -63,8 +63,11 @@ Processor.prototype.frame = function() {
             return;
         }
         var oldInstrCount = this.clock.c;
+        var oldPc = this.r.pc - 1;
         map[opcode](this);
         this.r.F &= 0xF0; // tmp fix
+        if (isNaN(this.r.pc))
+            console.log('NaN opcode : '+opcode.toString(16)+ ' at '+oldPc.toString(16));
         if (this.enableSerial) {
             var instr = this.clock.c - oldInstrCount;
             this.clock.serial += instr;
@@ -75,7 +78,6 @@ Processor.prototype.frame = function() {
         this.checkInterrupt();
     }
     this.screen.drawFrame();
-
 };
 
 Processor.prototype.timer = function() {
@@ -292,6 +294,14 @@ var map = {
     0x94: function(p){ops.SUBr(p, 'H');},
     0x95: function(p){ops.SUBr(p, 'L');},
     0x97: function(p){ops.SUBr(p, 'A');},
+    0x98: function(p){ops.SBCr(p, 'B');},
+    0x99: function(p){ops.SBCr(p, 'C');},
+    0x9A: function(p){ops.SBCr(p, 'D');},
+    0x9B: function(p){ops.SBCr(p, 'E');},
+    0x9C: function(p){ops.SBCr(p, 'H');},
+    0x9D: function(p){ops.SBCr(p, 'L');},
+    0x9E: function(p){ops.SBCrra(p, 'H', 'L');},
+    0x9F: function(p){ops.SBCr(p, 'A');},
 
     0xA0: function(p){ops.ANDr(p, 'B');},
     0xA1: function(p){ops.ANDr(p, 'C');},
@@ -358,6 +368,7 @@ var map = {
     //0xDB empty
     0xDC: function(p){ops.CALLccnn(p, 'C');},
     //0xDD empty
+    0xDE: function(p){ops.SBCn(p);},
     0xDF: function(p){ops.RSTn(p, 0x18);},
 
     0xE0: function(p){ops.LDHnar(p, 'A');},
@@ -562,8 +573,15 @@ var ops = {
         p.clock.c += 8;},
     SUBr:   function(p, r1) {var n = p.r[r1];ops._SUBn(p, n);p.clock.c += 4;},
     SUBn:   function(p) {var n = p.memory[p.r.pc++];ops._SUBn(p, n);p.clock.c += 8;},
-    _SUBn:  function(p, n) {var c = p.r.A < n;var h = ((p.r.A&0xF) + (n&0xF))&0x10;
-        p.r.A -= n;p.r.A&=0xFF; var z = p.r.A==0?1:0;
+    _SUBn:  function(p, n) {var c = p.r.A < n;var h = (p.r.A&0xF) < (n&0xF);
+        p.r.A -= n;p.r.A&=0xFF; var z = p.r.A==0;
+        var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
+    SBCn:   function(p) {var n = p.memory[p.r.pc++]; ops._SBCn(p, n); p.clock.c += 8;},
+    SBCr:   function(p, r1) {var n = p.r[r1]; ops._SBCn(p, n); p.clock.c += 4;},
+    SBCrra: function(p, r1, r2) {var v = p.memory[(p.r[r1] << 8) + p.r[r2]]; ops._SBCn(p, v); p.clock.c += 4;},
+    _SBCn:  function(p, n) {var carry = p.r.F&0x10 ? 1 : 0;
+        var c = p.r.A < n + carry;var h = (p.r.A&0xF) < (n&0xF) + carry;
+        p.r.A -= n + carry; p.r.A&=0xFF; var z = p.r.A == 0;
         var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
     ORr:    function(p, r1) {p.r.A|=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     ORn:    function(p) {p.r.A|=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},

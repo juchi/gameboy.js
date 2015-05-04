@@ -57,14 +57,21 @@ Processor.prototype.frame = function() {
 
     while (this.clock.c < maxInstructions) {
         var opcode = this.memory[this.r.pc++];
+        //if (opcode == 0)
+        //    console.log('opcode NOP at '+(this.r.pc-1).toString(16));
         if (!map[opcode]) {
             console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
             this.stop();
             return;
         }
         var oldInstrCount = this.clock.c;
+        var oldPc = this.r.pc - 1;
         map[opcode](this);
         this.r.F &= 0xF0; // tmp fix
+        if (isNaN(this.r.pc))
+            console.log('NaN opcode : '+opcode.toString(16)+ ' at '+oldPc.toString(16));
+        //if (this.r.pc == 0xDEF8)
+        //    console.log('DEF8 address from : '+opcode.toString(16)+ ' at '+oldPc.toString(16));
         if (this.enableSerial) {
             var instr = this.clock.c - oldInstrCount;
             this.clock.serial += instr;
@@ -76,6 +83,7 @@ Processor.prototype.frame = function() {
     }
     this.screen.drawFrame();
 
+    //console.log('end frame PC = '+this.r.pc.toString(16));
 };
 
 Processor.prototype.timer = function() {
@@ -564,6 +572,10 @@ var ops = {
     SUBn:   function(p) {var n = p.memory[p.r.pc++];ops._SUBn(p, n);p.clock.c += 8;},
     _SUBn:  function(p, n) {var c = p.r.A < n;var h = ((p.r.A&0xF) + (n&0xF))&0x10;
         p.r.A -= n;p.r.A&=0xFF; var z = p.r.A==0?1:0;
+        var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
+    SBCrn:  function(p, r1) {var v = p.memory[p.r.pc++]; ops._SBCrn(p, r1, v); p.clock.c += 8;},
+    _SBCrn: function(p, r1, n) {n=p.r.F&0x10?n+1:n; var c = p.r[r1] < n; p.r[r1]-= n;
+        var z = p.r[r1] == 0;
         var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
     ORr:    function(p, r1) {p.r.A|=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     ORn:    function(p) {p.r.A|=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},

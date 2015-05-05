@@ -142,7 +142,7 @@ var map = {
     0x04: function(p){ops.INCr(p, 'B');},
     0x05: function(p){ops.DECr(p, 'B');},
     0x06: function(p){ops.LDrn(p, 'B');},
-    0x07: function(p){p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=((p.r.A<<1)+out)&0xFF;p.clock.c+=4;},
+    0x07: function(p){var out=p.r.A & 0x80?1:0; out ? p.r.F=0x10:p.r.F=0; p.r.A=((p.r.A<<1)+out)&0xFF;p.clock.c+=4;},
     0x08: function(p){ops.LDnnsp(p);},
     0x09: function(p){ops.ADDrrrr(p, 'H', 'L', 'B', 'C');},
     0x0A: function(p){ops.LDrrra(p, 'A', 'B', 'C');},
@@ -150,16 +150,16 @@ var map = {
     0x0C: function(p){ops.INCr(p, 'C');},
     0x0D: function(p){ops.DECr(p, 'C');},
     0x0E: function(p){ops.LDrn(p, 'C');},
-    0x0F: function(p){p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)|(out*0x80);p.clock.c+=4;},
+    0x0F: function(p){var out=p.r.A & 0x01; out ? p.r.F=0x10:p.r.F=0; p.r.A=(p.r.A>>1)|(out*0x80);p.clock.c+=4;},
 
     0x10: function(p){p.r.pc++;p.clock.c+=4;},
     0x11: function(p){ops.LDrrnn(p, 'D', 'E');},
     0x12: function(p){ops.LDrrar(p, 'D', 'E', 'A');},
     0x13: function(p){ops.INCrr(p, 'D', 'E');},
     0x14: function(p){ops.INCr(p, 'D');},
-    0x15: function(p){ops.DECCr(p, 'D');},
+    0x15: function(p){ops.DECr(p, 'D');},
     0x16: function(p){ops.LDrn(p, 'D');},
-    0x17: function(p){var c = (p.r.F&0x10)?1:0;p.r.F=0;var out=p.r.A & 0x80?1:0; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A<<1)+c;p.clock.c+=4;},
+    0x17: function(p){var c = (p.r.F&0x10)?1:0;var out=p.r.A & 0x80?1:0; out ? p.r.F=0x10:p.r.F=0; p.r.A=((p.r.A<<1)+c)&0xFF;p.clock.c+=4;},
     0x18: function(p){ops.JRn(p);},
     0x19: function(p){ops.ADDrrrr(p, 'H', 'L', 'D', 'E');},
     0x1A: function(p){ops.LDrrra(p, 'A', 'D', 'E');},
@@ -167,7 +167,7 @@ var map = {
     0x1C: function(p){ops.INCr(p, 'E');},
     0x1D: function(p){ops.DECr(p, 'E');},
     0x1E: function(p){ops.LDrn(p, 'E');},
-    0x1F: function(p){var c = (p.r.F&0x10)?1:0;p.r.F=0;var out=p.r.A & 0x01; out ? p.r.F|=0x10:p.r.F&=0xEF; p.r.A=(p.r.A>>1)|(c*0x80);p.clock.c+=4;},
+    0x1F: function(p){var c = (p.r.F&0x10)?1:0;var out=p.r.A & 0x01; out ? p.r.F=0x10:p.r.F=0; p.r.A=(p.r.A>>1)|(c*0x80);p.clock.c+=4;},
 
     0x20: function(p){ops.JRccn(p, 'NZ');},
     0x21: function(p){ops.LDrrnn(p, 'H', 'L');},
@@ -605,7 +605,7 @@ var ops = {
     LDHrna: function(p, r1){p.r[r1]=p.memory[0xFF00 + p.memory[p.r.pc++]];p.clock.c+=12;},
     INCrr:  function(p, r1, r2) {p.r[r2]=(p.r[r2]+1)&255; p.r[r2] == 0 ? p.r[r1] = (p.r[r1]+1)&255:null;p.clock.c += 8;},
     INCsp:  function(p){p.r.sp++; p.r.sp &= 0xFFFF; p.clock.c+=8;},
-    INCr:   function(p, r1) {var h = (p.r[r1]&0xF + 1)&0x10;p.r[r1] = (p.r[r1] + 1) & 255;var z = p.r[r1]==0;
+    INCr:   function(p, r1) {var h = ((p.r[r1]&0xF) + 1)&0x10;p.r[r1] = (p.r[r1] + 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},
     DECrr:  function(p, r1, r2) {p.r[r2] = (p.r[r2] - 1) & 255; if (p.r[r2] == 255) p.r[r1] = (p.r[r1] - 1) & 255;p.clock.c += 8;},
@@ -690,7 +690,7 @@ var ops = {
     _CALLnn:function(p){
         p.memory.wb(--p.r.sp, ((p.r.pc+2)&0xFF00)>>8);p.memory.wb(--p.r.sp,(p.r.pc+2)&0x00FF);
         var j=p.memory[p.r.pc]+(p.memory[p.r.pc+1]<<8);p.r.pc=j;},
-    CPL:    function(p) {p.r.A = ~p.r.A;p.r.F|=0x60,p.clock.c += 4;},
+    CPL:    function(p) {p.r.A = (~p.r.A)&0xFF;p.r.F|=0x60,p.clock.c += 4;},
     CCF:    function(p) {p.r.F&=0x9F;p.r.F&0x10?p.r.F&=0xE0:p.r.F|=0x10;p.clock.c += 4;},
     SCF:    function(p) {p.r.F&=0x9F;p.r.F|=0x10;p.clock.c+=4;},
     DAA:    function(p) {},

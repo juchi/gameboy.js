@@ -406,6 +406,14 @@ var map = {
 };
 
 var cbmap = {
+    0x00: function(p){ops.RLCr(p, 'B');},
+    0x01: function(p){ops.RLCr(p, 'C');},
+    0x02: function(p){ops.RLCr(p, 'D');},
+    0x03: function(p){ops.RLCr(p, 'E');},
+    0x04: function(p){ops.RLCr(p, 'H');},
+    0x05: function(p){ops.RLCr(p, 'L');},
+    //0x06: function(p){ops.RLCrra(p, 'H', 'L');},
+    0x07: function(p){ops.RLCr(p, 'A');},
     0x08: function(p){ops.RRCr(p, 'B');},
     0x09: function(p){ops.RRCr(p, 'C');},
     0x0A: function(p){ops.RRCr(p, 'D');},
@@ -663,6 +671,7 @@ var ops = {
         var c = p.r.A < n;var z = p.r.A == n;var h = (p.r.A&0xF) < (n&0xF);
         var f = 0x40;if(z)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;},
     RRCr:   function(p, r1) {p.r.F=0;var out=p.r[r1] & 0x01;if(out)p.r.F|=0x10;p.r[r1]=(p.r[r1]>>1)|(out*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    RLCr:   function(p, r1) {p.r.F=0;var out=p.r[r1]&0x80?1:0;if(out)p.r.F|=0x10;p.r[r1]=((p.r[r1]<<1)+out)&0xFF;if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     RRr:    function(p, r1) {var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.r[r1]&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=(p.r[r1]>>1)|(c*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>8)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;p.r[r1]=p.r[r1]>>8;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},

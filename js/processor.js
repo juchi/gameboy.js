@@ -440,12 +440,21 @@ var cbmap = {
     //0x1E: function(p){ops.RRrra(p, 'H', 'L');},
     0x1F: function(p){ops.RRr(p, 'A');},
 
+    0x20: function(p){ops.SLAr(p, 'B');},
+    0x21: function(p){ops.SLAr(p, 'C');},
+    0x22: function(p){ops.SLAr(p, 'D');},
+    0x23: function(p){ops.SLAr(p, 'E');},
+    0x24: function(p){ops.SLAr(p, 'H');},
+    0x25: function(p){ops.SLAr(p, 'L');},
+    0x26: function(p){ops.SLArra(p, 'H', 'L');},
+    0x27: function(p){ops.SLAr(p, 'A');},
     0x28: function(p){ops.SRAr(p, 'B');},
     0x29: function(p){ops.SRAr(p, 'C');},
     0x2A: function(p){ops.SRAr(p, 'D');},
     0x2B: function(p){ops.SRAr(p, 'E');},
     0x2C: function(p){ops.SRAr(p, 'H');},
     0x2D: function(p){ops.SRAr(p, 'L');},
+    0x2E: function(p){ops.SRArra(p, 'H', 'L');},
     0x2F: function(p){ops.SRAr(p, 'A');},
 
     0x30: function(p){ops.SWAPr(p, 'B');},
@@ -751,8 +760,11 @@ var ops = {
     RLr:    function(p, r1) {var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.r[r1]&0x80;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=((p.r[r1]<<1)+c)&0xFF;if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     RRr:    function(p, r1) {var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.r[r1]&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=(p.r[r1]>>1)|(c*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
     SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>1)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SRArra: function(p, r1, r2) {var addr = ops._getRegAddr(r1, r2);p.r.F = 0;if (p.memory[addr]&0x10)p.r.F|=0x10;var msb=p.memory[addr]&0x80;p.memory[addr]=(p.memory[addr]>>1)|msb;if (p.memory[addr]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SLAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x80)p.r.F|=0x10;p.r[r1]=(p.r[r1]<<1)&0xFF;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
+    SLArra: function(p, r1, r2) {var addr = ops._getRegAddr(r1, r2);p.r.F = 0;if (p.memory[addr]&0x80)p.r.F|=0x10;p.memory[addr]=(p.memory[addr]<<1)&0xFF;if (p.memory[addr]==0)p.r.F|=0x80;p.clock.c+=4;},
     SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;p.r[r1]=p.r[r1]>>1;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    BITir:  function(p, i, r1) {var mask=1<<i;var z=p.r[r1]&mask?1:0;var c=p.r.F&0x10;var f = 0x20;if(z)f|=0x80;if(c) f|=0x10;p.r.F=f;p.clock.c+=4;},
+    BITir:  function(p, i, r1) {var mask=(1<<i);var z=(p.r[r1]&mask)?1:0;var c=p.r.F&0x10;var f = 0x20;if(z)f|=0x80;if(c) f|=0x10;p.r.F=f;p.clock.c+=4;},
     SETir:  function(p, i, r1) {var mask=1<<i;p.r[r1]|=mask;p.clock.c += 4;},
     RESir:  function(p, i, r1) {var mask=0xFF - (1<<i);p.r[r1]&=mask;p.clock.c += 4;},
     SWAPr:  function(p, r1) {p.r[r1] = ops._SWAPn(p, p.r[r1]);p.clock.c+=8;},
@@ -789,5 +801,7 @@ var ops = {
         p.clock.c+=4;},
     _testFlag: function(p, cc) {
         var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
-        return (t && p.r.F&mask) || (!t && !(p.r.F&mask));}
+        return (t && p.r.F&mask) || (!t && !(p.r.F&mask));},
+    _getRegAddr: function(p, r1, r2) {return ops._makeword(p.r[r1], p.r[r2]);},
+    _makeword: function(b1, b2) {return (b1 << 8) + b2;}
 };

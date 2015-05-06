@@ -190,6 +190,7 @@ var map = {
     0x31: function(p){ops.LDspnn(p);},
     0x32: function(p){ops.LDrrar(p, 'H', 'L', 'A');ops.DECrr(p, 'H', 'L');p.clock.c -= 8;},
     0x33: function(p){ops.INCsp(p);},
+    0x34: function(p){ops.INCrra(p, 'H', 'L');},
     0x35: function(p){ops.DECrra(p, 'H', 'L');},
     0x36: function(p){ops.LDrran(p, 'H', 'L');},
     0x37: function(p){ops.SCF(p);},
@@ -697,12 +698,16 @@ var ops = {
     LDHnar: function(p, r1){p.memory.wb(0xFF00 + p.memory[p.r.pc++],p.r[r1]);p.clock.c+=12;},
     LDHrna: function(p, r1){p.r[r1]=p.memory[0xFF00 + p.memory[p.r.pc++]];p.clock.c+=12;},
     INCrr:  function(p, r1, r2) {p.r[r2]=(p.r[r2]+1)&255; p.r[r2] == 0 ? p.r[r1] = (p.r[r1]+1)&255:null;p.clock.c += 8;},
+    INCrra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var val = p.memory[addr]+1;var z = val==0;var h=(p.memory[addr]&0xF)+1 > 0xF;
+        p.memory.wb(addr, val);
+        p.r.F&=0x10;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
+        p.clock.c+=12;},
     INCsp:  function(p){p.r.sp++; p.r.sp &= 0xFFFF; p.clock.c+=8;},
     INCr:   function(p, r1) {var h = ((p.r[r1]&0xF) + 1)&0x10;p.r[r1] = (p.r[r1] + 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},
     DECrr:  function(p, r1, r2) {p.r[r2] = (p.r[r2] - 1) & 255; if (p.r[r2] == 255) p.r[r1] = (p.r[r1] - 1) & 255;p.clock.c += 8;},
-    DECsp:  function(p){p.r.sp++; p.r.sp &= 0xFFFF; p.clock.c+=8;},
+    DECsp:  function(p){p.r.sp--; p.r.sp &= 0xFFFF; p.clock.c+=8;},
     DECr:   function(p, r1) {var h = (p.r[r1]&0xF) < 1;p.r[r1] = (p.r[r1] - 1) & 255;var z = p.r[r1]==0;
         p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},

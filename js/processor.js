@@ -176,7 +176,7 @@ var map = {
     0x24: function(p){ops.INCr(p, 'H');},
     0x25: function(p){ops.DECr(p, 'H');},
     0x26: function(p){ops.LDrn(p, 'H');},
-    // 0x27: function(p) {ops.DAA(p);}, not implemented
+    0x27: function(p){ops.DAA(p);},
     0x28: function(p){ops.JRccn(p, 'Z');},
     0x29: function(p){ops.ADDrrrr(p, 'H', 'L', 'H', 'L');},
     0x2A: function(p){ops.LDrrra(p, 'A', 'H', 'L');ops.INCrr(p, 'H', 'L');p.clock.c -= 8;},
@@ -800,7 +800,31 @@ var ops = {
     CPL:    function(p) {p.r.A = (~p.r.A)&0xFF;p.r.F|=0x60,p.clock.c += 4;},
     CCF:    function(p) {p.r.F&=0x9F;p.r.F&0x10?p.r.F&=0xE0:p.r.F|=0x10;p.clock.c += 4;},
     SCF:    function(p) {p.r.F&=0x9F;p.r.F|=0x10;p.clock.c+=4;},
-    DAA:    function(p) {},
+    DAA:    function(p) {
+        var sub = (p.r.F&0x40) ? 1 : 0; var h = (p.r.F&0x20)?1:0;var c = (p.r.F&0x10)?1:0;
+        if (sub) {
+            if (h) {
+                p.r.A = (p.r.A - 0x6) & 0xFF;
+            }
+            if (c) {
+                p.r.A -= 0x60;
+            }
+        } else {
+            var lsb = p.r.A&0xF;
+            if (lsb > 9 || h) {
+                p.r.A += 0x6;
+            }
+            var msb = (p.r.A >> 4)&0xF;
+            if (msb > 9 || c) {
+                p.r.A += 0x60;
+            }
+        }
+        if (p.r.A&0x100) c = 1;
+
+        p.r.A &= 0xFF;
+        p.r.F &= 0x40;if (p.r.A == 0) p.r.F|=0x80;if (c) p.r.F|=0x10;
+        p.clock.c += 4;
+    },
     DI:     function(p) {p.disableInterrupts();p.clock.c += 4;},
     EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
     RETI:   function(p) {p.enableInterrupts();ops.RET(p);p.clock.c+=16;},

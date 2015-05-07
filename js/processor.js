@@ -704,7 +704,7 @@ var ops = {
     LDnnar: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.wr(r1, p.memory[addr]);p.r.pc+=2; p.clock.c += 16;},
     LDrrspn:function(p, r1, r2){var rel = p.memory[p.r.pc++];rel=rel&0x80?rel-256:rel;var val=p.r.sp + rel;p.wr(r1, val >> 8);p.wr(r2, val&0xFF);p.clock.c+=12;},
-    LDnnsp: function(p) {ops._LDav(p, p.memory[p.r.pc++] + (p.memory[p.r.pc++]<<8), p.r.sp);p.clock.c+=20;},
+    LDnnsp: function(p) {var addr = p.memory[p.r.pc++] + (p.memory[p.r.pc++]<<8); ops._LDav(p, addr, p.r.sp & 0xFF);ops._LDav(p, addr+1, p.r.sp >> 8);p.clock.c+=20;},
     LDrran: function(p, r1, r2){var addr = ops._getRegAddr(p, r1, r2);ops._LDav(p, addr, p.memory[p.r.pc++]);p.clock.c+=12;},
     _LDav:  function(p, addr, val){p.memory.wb(addr, val);},
     LDHnar: function(p, r1){p.memory.wb(0xFF00 + p.memory[p.r.pc++],p.r[r1]);p.clock.c+=12;},

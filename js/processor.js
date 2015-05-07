@@ -294,6 +294,7 @@ var map = {
     0x93: function(p){ops.SUBr(p, 'E');},
     0x94: function(p){ops.SUBr(p, 'H');},
     0x95: function(p){ops.SUBr(p, 'L');},
+    0x96: function(p){ops.SUBrra(p, 'H', 'L');},
     0x97: function(p){ops.SUBr(p, 'A');},
     0x98: function(p){ops.SBCr(p, 'B');},
     0x99: function(p){ops.SBCr(p, 'C');},
@@ -310,7 +311,7 @@ var map = {
     0xA3: function(p){ops.ANDr(p, 'E');},
     0xA4: function(p){ops.ANDr(p, 'H');},
     0xA5: function(p){ops.ANDr(p, 'L');},
-    //0xA6: function(p){},
+    0xA6: function(p){ops.ANDrra(p, 'H', 'L');},
     0xA7: function(p){ops.ANDr(p, 'A');},
     0xA8: function(p){ops.XORr(p, 'B');},
     0xA9: function(p){ops.XORr(p, 'C');},
@@ -737,6 +738,7 @@ var ops = {
         p.clock.c += 8;},
     SUBr:   function(p, r1) {var n = p.r[r1];ops._SUBn(p, n);p.clock.c += 4;},
     SUBn:   function(p) {var n = p.memory[p.r.pc++];ops._SUBn(p, n);p.clock.c += 8;},
+    SUBrra: function(p, r1, r2) {var n = p.memory[ops._getRegAddr(p, r1, r2)];ops._SUBn(p, n);p.clock.c+=8;},
     _SUBn:  function(p, n) {var c = p.r.A < n;var h = (p.r.A&0xF) < (n&0xF);
         p.r.A -= n;p.r.A&=0xFF; var z = p.r.A==0;
         var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
@@ -752,6 +754,7 @@ var ops = {
     ORrra:  function(p, r1, r2) {p.r.A|=p.memory[(p.r[r1] << 8)+ p.r[r2]];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},
     ANDr:   function(p, r1) {p.r.A&=p.r[r1];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 4;},
     ANDn:   function(p) {p.r.A&=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 4;},
+    ANDrra: function(p, r1, r2) {p.r.A&=p.memory[ops._getRegAddr(p, r1, r2)];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 8;},
     XORr:   function(p, r1) {p.r.A^=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     XORn:   function(p) {p.r.A^=p.memory[p.r.pc++];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     XORrra: function(p, r1, r2) {p.r.A^=p.memory[(p.r[r1] << 8)+ p.r[r2]];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},

@@ -803,7 +803,7 @@ var ops = {
     DAA:    function(p) {},
     DI:     function(p) {p.disableInterrupts();p.clock.c += 4;},
     EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
-    RETI:   function(p) {p.enableInterrupts();ops.RET(p);},
+    RETI:   function(p) {p.enableInterrupts();ops.RET(p);p.clock.c+=16;},
     CB:     function(p) {var opcode = p.memory[p.r.pc++];
         if (!cbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else cbmap[opcode](p);
         p.clock.c+=4;},

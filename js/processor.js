@@ -19,6 +19,7 @@ var Processor = function() {
     this.clock = {c: 0, serial: 0};
     this.memory = new Memory(this);
     this.IME = true;
+    this.isHalted = false;
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
     this.serialHandler = {out:function(data) {console.log('serial: '+String.fromCharCode(data)+'('+data+')' );}, in:function(){return 0xFF;}};
@@ -51,41 +52,57 @@ Processor.prototype.frame = function() {
     this.clock.c = 0;
 
     while (this.clock.c < maxInstructions) {
-        var opcode = this.memory[this.r.pc++];
-        if (!map[opcode]) {
-            console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
-            this.stop();
-            return;
-        }
         var oldInstrCount = this.clock.c;
-        var oldPc = this.r.pc - 1;
-        map[opcode](this);
-        this.r.F &= 0xF0; // tmp fix
-        if (isNaN(this.r.pc))
-            console.log('NaN opcode : '+opcode.toString(16)+ ' at '+oldPc.toString(16));
-        if (this.enableSerial) {
-            var instr = this.clock.c - oldInstrCount;
-            this.clock.serial += instr;
-            if (this.clock.serial >= 8 * this.SERIAL_INTERNAL_INSTR) {
-                this.endSerialTransfer();
-            }
-        }
-        this.timer.tick(this.clock.c - oldInstrCount);
+        if (!this.isHalted) {
+            var opcode = this.fetchOpcode();
+            map[opcode](this);
+            this.r.F &= 0xF0; // tmp fix
 
+            if (this.enableSerial) {
+                var instr = this.clock.c - oldInstrCount;
+                this.clock.serial += instr;
+                if (this.clock.serial >= 8 * this.SERIAL_INTERNAL_INSTR) {
+                    this.endSerialTransfer();
+                }
+            }
+        } else {
+            this.clock.c += 4;
+        }
+
+        this.timer.tick(this.clock.c - oldInstrCount);
         this.checkInterrupt();
     }
     this.screen.drawFrame();
 };
 
+Processor.prototype.fetchOpcode = function() {
+    var opcode = this.memory[this.r.pc++];
+    if (opcode === undefined) {console.log(opcode + ' at ' + (this.r.pc-1).toString(16));this.stop();return;}
+    if (!map[opcode]) {
+        console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
+        this.stop();
+        return null;
+    }
+
+    return opcode;
+};
+
 // read register
 Processor.prototype.rr = function(register) {
     return this.r[register];
-}
+};
 
 // write register
 Processor.prototype.wr = function(register, value) {
     this.r[register] = value;
-}
+};
+
+Processor.prototype.halt = function() {
+    this.isHalted = true;
+};
+Processor.prototype.unhalt = function() {
+    this.isHalted = false;
+};
 
 Processor.prototype.checkInterrupt = function() {
     if (!this.IME) {
@@ -96,12 +113,14 @@ Processor.prototype.checkInterrupt = function() {
             this.memory[0xFF0F] &= (0xFF - (1<<i));
             this.disableInterrupts();
             this.interruptRoutines[i](this);
+            break;
         }
     }
 };
 
 Processor.prototype.requestInterrupt = function(type) {
     this.memory[0xFF0F] |= (1 << type);
+    this.unhalt();
 };
 
 Processor.prototype.isInterruptEnable = function(type) {
@@ -254,7 +273,7 @@ var map = {
     0x73: function(p){ops.LDrrar(p, 'H', 'L', 'E');},
     0x74: function(p){ops.LDrrar(p, 'H', 'L', 'H');},
     0x75: function(p){ops.LDrrar(p, 'H', 'L', 'L');},
-    0x76: function(p){p.clock.c+=4;},
+    0x76: function(p){ops.HALT(p);},
     0x77: function(p){ops.LDrrar(p, 'H', 'L', 'A');},
     0x78: function(p){ops.LDrr(p, 'A', 'B');},
     0x79: function(p){ops.LDrr(p, 'A', 'C');},
@@ -825,6 +844,7 @@ var ops = {
         p.r.F &= 0x40;if (p.r.A == 0) p.r.F|=0x80;if (c) p.r.F|=0x10;
         p.clock.c += 4;
     },
+    HALT:   function(p) {p.halt(); p.clock.c+=4;},
     DI:     function(p) {p.disableInterrupts();p.clock.c += 4;},
     EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
     RETI:   function(p) {p.enableInterrupts();ops.RET(p);p.clock.c+=16;},

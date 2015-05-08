@@ -24,7 +24,9 @@ var Processor = function() {
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
     this.clock = {c: 0, serial: 0};
     this.memory = new Memory(this);
-    this.interruptEnable = true;
+    this.TIMER_COUNTER = 0xFF05;
+    this.TIMER_MODULO  = 0xFF06;
+    this.IME = true;
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
     this.serialHandler = {out:function(data) {console.log('serial: '+String.fromCharCode(data)+'('+data+')' );}, in:function(){return 0xFF;}};
@@ -75,6 +77,8 @@ Processor.prototype.frame = function() {
                 this.endSerialTransfer();
             }
         }
+        this.timer(this.clock.c - oldInstrCount);
+
         this.checkInterrupt();
     }
     this.screen.drawFrame();
@@ -89,20 +93,35 @@ Processor.prototype.rr = function(register) {
 Processor.prototype.wr = function(register, value) {
     this.r[register] = value;
 }
+var timerInstr = 0;
+Processor.prototype.timer = function(time) {
+    if (!(this.memory[0xFF07]&0x4)) {
+        return;
+    }
+    timerInstr+=time;
+    var threshold = 64;
+    switch (this.memory[0xFF07]&3) {
+        case 0: threshold=64; break; // 4KHz
+        case 1: threshold=1; break; // 256KHz
+        case 2: threshold=4; break; // 64KHz
+        case 3: threshold=16; break; // 16KHz
+    }
+    threshold *= 16;
 
-Processor.prototype.timer = function() {
-    var time = 1000;
-    setTimeout(this.timer.bind(this), time);
-    this.memory[this.TIMER_COUNTER]++;
-    if (this.memory[this.TIMER_COUNTER] > 255) {
-        this.memory[this.TIMER_COUNTER] = this.memory[this.TIMER_OVERFLOW];
+    if (timerInstr >= threshold) {
+        timerInstr -= threshold;
+
+        this.memory[this.TIMER_COUNTER]++;
+        if (this.memory[this.TIMER_COUNTER] > 255) {
+            this.memory[this.TIMER_COUNTER] = this.memory[this.TIMER_OVERFLOW];
+            this.requestInterrupt(this.INTERRUPTS.TIMER);
+        }
     }
 
-    this.interrupt(this.INTERRUPTS.TIMER);
 };
 
 Processor.prototype.checkInterrupt = function() {
-    if (!this.interruptEnable) {
+    if (!this.IME) {
         return;
     }
     for (var i = 0; i < 5; i++) {
@@ -114,10 +133,8 @@ Processor.prototype.checkInterrupt = function() {
     }
 };
 
-Processor.prototype.interrupt = function(type) {
-    if (this.isInterruptEnable(type)) {
-        this.memory[0xFF0F] |= (1 << type);
-    }
+Processor.prototype.requestInterrupt = function(type) {
+    this.memory[0xFF0F] |= (1 << type);
 };
 
 Processor.prototype.isInterruptEnable = function(type) {
@@ -125,10 +142,10 @@ Processor.prototype.isInterruptEnable = function(type) {
 };
 
 Processor.prototype.enableInterrupts = function() {
-    this.interruptEnable = true;
+    this.IME = true;
 };
 Processor.prototype.disableInterrupts = function() {
-    this.interruptEnable = false;
+    this.IME = false;
 };
 
 Processor.prototype.enableSerialTransfer = function() {

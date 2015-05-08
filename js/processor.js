@@ -703,7 +703,7 @@ var ops = {
     LDrar:  function(p, r1, r2) {p.memory.wb(p.r[r1]+0xFF, p.r[r2]);p.r.pc++;p.clock.c += 8;},
     LDrra:  function(p, r1, r2) {p.wr(r1, p.memory[p.r[r2]+0xFF]);p.r.pc++;p.clock.c += 8;},
     LDspnn: function(p) {p.wr('sp', (p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc]);p.r.pc+=2;p.clock.c += 12;},
-    LDsprr: function(p, r1, r2) {p.wr('sp', (p.memory[p.r[r1]] << 8) + p.memory[p.r[r2]]);p.clock.c += 8;},
+    LDsprr: function(p, r1, r2) {p.wr('sp', ops._getRegAddr(p, r1, r2));p.clock.c += 8;},
     LDnnar: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.wr(r1, p.memory[addr]);p.r.pc+=2; p.clock.c += 16;},
     LDrrspn:function(p, r1, r2){var rel = p.memory[p.r.pc++];rel=rel&0x80?rel-256:rel;var val=p.r.sp + rel;p.wr(r1, val >> 8);p.wr(r2, val&0xFF);p.clock.c+=12;},

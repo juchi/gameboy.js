@@ -22,7 +22,7 @@ var Processor = function() {
     this.isHalted = false;
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
-    this.serialHandler = {out:function(data) {console.log('serial: '+String.fromCharCode(data)+'('+data+')' );}, in:function(){return 0xFF;}};
+    this.serialHandler = ConsoleSerial;
     this.timer = new Timer(this, this.memory);
 };
 

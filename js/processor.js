@@ -15,21 +15,14 @@ var Processor = function() {
         4: function(p){ops.RSTn(p, 0x60);}
     };
 
-    var proc = this;
-    function timerInterrupt() {
-        console.log('timer');
-        proc.memory[0xFF42]++;
-    }
-
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
     this.clock = {c: 0, serial: 0};
     this.memory = new Memory(this);
-    this.TIMER_COUNTER = 0xFF05;
-    this.TIMER_MODULO  = 0xFF06;
     this.IME = true;
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
     this.serialHandler = {out:function(data) {console.log('serial: '+String.fromCharCode(data)+'('+data+')' );}, in:function(){return 0xFF;}};
+    this.timer = new Timer(this, this.memory);
 };
 
 Processor.prototype.reset = function() {
@@ -77,7 +70,7 @@ Processor.prototype.frame = function() {
                 this.endSerialTransfer();
             }
         }
-        this.timer(this.clock.c - oldInstrCount);
+        this.timer.tick(this.clock.c - oldInstrCount);
 
         this.checkInterrupt();
     }
@@ -93,32 +86,6 @@ Processor.prototype.rr = function(register) {
 Processor.prototype.wr = function(register, value) {
     this.r[register] = value;
 }
-var timerInstr = 0;
-Processor.prototype.timer = function(time) {
-    if (!(this.memory[0xFF07]&0x4)) {
-        return;
-    }
-    timerInstr+=time;
-    var threshold = 64;
-    switch (this.memory[0xFF07]&3) {
-        case 0: threshold=64; break; // 4KHz
-        case 1: threshold=1; break; // 256KHz
-        case 2: threshold=4; break; // 64KHz
-        case 3: threshold=16; break; // 16KHz
-    }
-    threshold *= 16;
-
-    if (timerInstr >= threshold) {
-        timerInstr -= threshold;
-
-        this.memory[this.TIMER_COUNTER]++;
-        if (this.memory[this.TIMER_COUNTER] > 255) {
-            this.memory[this.TIMER_COUNTER] = this.memory[this.TIMER_OVERFLOW];
-            this.requestInterrupt(this.INTERRUPTS.TIMER);
-        }
-    }
-
-};
 
 Processor.prototype.checkInterrupt = function() {
     if (!this.IME) {

@@ -806,17 +806,17 @@ var ops = {
     JPccnn: function(p, cc) {if (ops._testFlag(p, cc)){p.wr('pc', (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc]);p.clock.c+=4;}else{p.r.pc+=2;}p.clock.c += 12;},
     JPrr:   function(p, r1, r2) {p.r.pc = (p.r[r1] << 8) + p.r[r2];p.clock.c += 4;},
     JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
-    PUSHrr: function(p, r1, r2) {p.memory.wb(--p.r.sp, p.r[r1]);p.memory.wb(--p.r.sp, p.r[r2]);p.clock.c+=16;},
-    POPrr:  function(p, r1, r2) {p.wr(r2, p.memory[p.r.sp++]);p.wr(r1, p.memory[p.r.sp++]);p.clock.c+=12;},
-    RSTn:   function(p, n) {p.memory.wb(--p.r.sp,p.r.pc>>8);p.memory.wb(--p.r.sp,p.r.pc&0xFF);p.r.pc=n;p.clock.c+=16;},
-    RET:    function(p) {p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c += 16;},
-    RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory[p.r.sp++];p.r.pc+=p.memory[p.r.sp++]<<8;p.clock.c+=12;}p.clock.c+=8;},
+    PUSHrr: function(p, r1, r2) {p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp, p.r[r1]);p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp, p.r[r2]);p.clock.c+=16;},
+    POPrr:  function(p, r1, r2) {p.wr(r2, p.memory[p.r.sp]);p.wr('sp', p.r.sp+1);p.wr(r1, p.memory[p.r.sp]);p.wr('sp', p.r.sp+1);p.clock.c+=12;},
+    RSTn:   function(p, n) {p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp,p.r.pc>>8);p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp,p.r.pc&0xFF);p.r.pc=n;p.clock.c+=16;},
+    RET:    function(p) {p.r.pc = p.memory[p.r.sp];p.wr('sp', p.r.sp+1);p.r.pc+=p.memory[p.r.sp]<<8;p.wr('sp', p.r.sp+1);p.clock.c += 16;},
+    RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory[p.r.sp];p.wr('sp', p.r.sp+1);p.r.pc+=p.memory[p.r.sp]<<8;p.wr('sp', p.r.sp+1);p.clock.c+=12;}p.clock.c+=8;},
     CALLnn: function(p) {ops._CALLnn(p); p.clock.c+=24;},
     CALLccnn:function(p, cc) {if (ops._testFlag(p, cc)){ops._CALLnn(p);p.clock.c+=12;}else{p.r.pc+=2;}p.clock.c+=12; },
     _CALLnn:function(p){p.wr('sp', p.r.sp - 1); p.memory.wb(p.r.sp, ((p.r.pc+2)&0xFF00)>>8);
         p.wr('sp', p.r.sp - 1); p.memory.wb(p.r.sp, (p.r.pc+2)&0x00FF);
         var j=p.memory[p.r.pc]+(p.memory[p.r.pc+1]<<8);p.r.pc=j;},
-    CPL:    function(p) {p.r.A = (~p.r.A)&0xFF;p.r.F|=0x60,p.clock.c += 4;},
+    CPL:    function(p) {p.wr('A', (~p.r.A)&0xFF);p.r.F|=0x60,p.clock.c += 4;},
     CCF:    function(p) {p.r.F&=0x9F;p.r.F&0x10?p.r.F&=0xE0:p.r.F|=0x10;p.clock.c += 4;},
     SCF:    function(p) {p.r.F&=0x9F;p.r.F|=0x10;p.clock.c+=4;},
     DAA:    function(p) {

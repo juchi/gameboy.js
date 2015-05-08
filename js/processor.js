@@ -839,12 +839,10 @@ var ops = {
                 p.r.A -= 0x60;
             }
         } else {
-            var lsb = p.r.A&0xF;
-            if (lsb > 9 || h) {
+            if ((p.r.A&0xF) > 9 || h) {
                 p.r.A += 0x6;
             }
-            var msb = (p.r.A >> 4)&0xF;
-            if (msb > 9 || c) {
+            if (p.r.A > 0x9F || c) {
                 p.r.A += 0x60;
             }
         }

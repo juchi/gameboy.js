@@ -394,6 +394,7 @@ var map = {
     0xE5: function(p){ops.PUSHrr(p, 'H', 'L');},
     0xE6: function(p){ops.ANDn(p);},
     0xE7: function(p){ops.RSTn(p, 0x20);},
+    0xE8: function(p){ops.ADDspn(p);},
     0xE9: function(p){ops.JPrr(p, 'H', 'L');},
     0xEA: function(p){ops.LDnnar(p, 'A');},
     //0xEB empty
@@ -706,7 +707,11 @@ var ops = {
     LDsprr: function(p, r1, r2) {p.wr('sp', ops._getRegAddr(p, r1, r2));p.clock.c += 8;},
     LDnnar: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.wr(r1, p.memory[addr]);p.r.pc+=2; p.clock.c += 16;},
-    LDrrspn:function(p, r1, r2){var rel = p.memory[p.r.pc++];rel=rel&0x80?rel-256:rel;var val=p.r.sp + rel;p.wr(r1, val >> 8);p.wr(r2, val&0xFF);p.clock.c+=12;},
+    LDrrspn:function(p, r1, r2) {var rel = p.memory[p.r.pc++];rel=ops._getSignedValue(rel);var val=p.r.sp + rel;
+        var c = (p.r.sp&0xFF) + (rel&0xFF) > 0xFF;var h = (p.r.sp & 0xF) + (rel & 0xF) > 0xF;val &= 0xFFFF;
+        var f = 0; if(h)f|=0x20;if(c)f|=0x10;p.wr('F', f);
+        p.wr(r1, val >> 8);p.wr(r2, val&0xFF);
+        p.clock.c+=12;},
     LDnnsp: function(p) {var addr = p.memory[p.r.pc++] + (p.memory[p.r.pc++]<<8); ops._LDav(p, addr, p.r.sp & 0xFF);ops._LDav(p, addr+1, p.r.sp >> 8);p.clock.c+=20;},
     LDrran: function(p, r1, r2){var addr = ops._getRegAddr(p, r1, r2);ops._LDav(p, addr, p.memory[p.r.pc++]);p.clock.c+=12;},
     _LDav:  function(p, addr, val){p.memory.wb(addr, val);},
@@ -736,6 +741,11 @@ var ops = {
             var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.wr('F', f);},
     ADDrrrr:function(p, r1, r2, r3, r4) {ops._ADDrrn(p, r1, r2, (p.r[r3]<<8) + p.r[r4]); p.clock.c+=8;},
     ADDrrsp:function(p, r1, r2) {ops._ADDrrn(p, r1, r2, p.r.sp); p.clock.c += 8;},
+    ADDspn: function(p) {var v = p.memory[p.r.pc++];v = ops._getSignedValue(v);
+        var c = ((p.r.sp&0xFF) + (v&0xFF)) > 0xFF; var h = (p.r.sp & 0xF) + (v&0xF) > 0xF;
+        var f = 0; if(h)f|=0x20;if(c)f|=0x10;p.wr('F', f);
+        p.wr('sp', (p.r.sp + v) & 0xFFFF);
+        p.clock.c+=16;},
     _ADDrrn:function(p, r1, r2, n) {var v1 = (p.r[r1]<<8) + p.r[r2];v2 = n;
         var res = v1 + v2;var c = res&0x10000;var h = ((v1&0xFFF) + (v2&0xFFF))&0x1000;var z = p.r.F&0x80;
         res&=0xFFFF;p.r[r2]=res&0xFF;res=res>>8;p.r[r1]=res&0xFF;
@@ -802,10 +812,10 @@ var ops = {
     SWAPrra:function(p, r1, r2){var addr = (p.r[r1] << 8)+ p.r[r2]; p.memory.wb(addr, ops._SWAPn(p, p.memory[addr])); p.clock.c+=16;},
     _SWAPn: function(p, n){p.r.F = n==0?0x80:0;return ((n&0xF0) >> 4) | ((n&0x0F) << 4);},
     JPnn:   function(p) {p.wr('pc', (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc]);p.clock.c += 12;},
-    JRccn:  function(p, cc) {if (ops._testFlag(p, cc)){var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}p.clock.c += 8;},
+    JRccn:  function(p, cc) {if (ops._testFlag(p, cc)){var v=p.memory[p.r.pc++];v=ops._getSignedValue(v);p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}p.clock.c += 8;},
     JPccnn: function(p, cc) {if (ops._testFlag(p, cc)){p.wr('pc', (p.memory[p.r.pc+1] << 8) + p.memory[p.r.pc]);p.clock.c+=4;}else{p.r.pc+=2;}p.clock.c += 12;},
     JPrr:   function(p, r1, r2) {p.r.pc = (p.r[r1] << 8) + p.r[r2];p.clock.c += 4;},
-    JRn:    function(p) {var v=p.memory[p.r.pc++];v=v&0x80?v-256:v;p.r.pc += v;p.clock.c += 12;},
+    JRn:    function(p) {var v=p.memory[p.r.pc++];v=ops._getSignedValue(v);p.r.pc += v;p.clock.c += 12;},
     PUSHrr: function(p, r1, r2) {p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp, p.r[r1]);p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp, p.r[r2]);p.clock.c+=16;},
     POPrr:  function(p, r1, r2) {p.wr(r2, p.memory[p.r.sp]);p.wr('sp', p.r.sp+1);p.wr(r1, p.memory[p.r.sp]);p.wr('sp', p.r.sp+1);p.clock.c+=12;},
     RSTn:   function(p, n) {p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp,p.r.pc>>8);p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp,p.r.pc&0xFF);p.r.pc=n;p.clock.c+=16;},
@@ -855,5 +865,6 @@ var ops = {
         var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         return (t && p.r.F&mask) || (!t && !(p.r.F&mask));},
     _getRegAddr: function(p, r1, r2) {return ops._makeword(p.r[r1], p.r[r2]);},
-    _makeword: function(b1, b2) {return (b1 << 8) + b2;}
+    _makeword: function(b1, b2) {return (b1 << 8) + b2;},
+    _getSignedValue: function(v) {return v & 0x80 ? v-256 : v;}
 };

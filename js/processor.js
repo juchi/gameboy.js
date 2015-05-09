@@ -69,7 +69,8 @@ Processor.prototype.frame = function() {
             this.clock.c += 4;
         }
 
-        this.timer.tick(this.clock.c - oldInstrCount);
+        var elapsed = this.clock.c - oldInstrCount;
+        this.timer.update(elapsed);
         this.checkInterrupt();
     }
     this.screen.drawFrame();

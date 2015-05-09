@@ -11,7 +11,7 @@ var Timer = function(cpu, memory) {
     this.divTime   = 0;
 };
 
-Timer.prototype.tick = function(clockElapsed) {
+Timer.prototype.update = function(clockElapsed) {
     this.updateDiv(clockElapsed);
     this.updateTimer(clockElapsed);
 };

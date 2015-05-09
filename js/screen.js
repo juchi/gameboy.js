@@ -11,9 +11,13 @@ var Screen = function(canvas, cpu) {
         '#555',
         '#000'
     ];
+    this.LCDC= 0xFF40;
+    this.STAT= 0xFF41;
     this.SCY = 0xFF42;
     this.SCX = 0xFF43;
-    //this.colors = ['red','green','blue','yellow'];
+    this.LY  = 0xFF44;
+    this.LYC = 0xFF45;
+
     this.vram = cpu.memory.vram.bind(cpu.memory);
     this.tilemap = {
         HEIGHT: 32,
@@ -23,7 +27,6 @@ var Screen = function(canvas, cpu) {
         LENGTH: 0x0400 // 1024 bytes = 32*32
     };
     this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
-    this.LCDC = 0;
     this.VBLANK_TIME = 70224;
     this.clock = 0;
     this.mode = 2;
@@ -80,26 +83,26 @@ Screen.prototype.update = function(clockElapsed) {
 Screen.prototype.drawFrame = function() {
 
     this.clearScreen();
-    this.LCDC = this.deviceram(0xFF40);
-    var enable = Memory.readBit(this.LCDC, 7);
+    var LCDC = this.deviceram(this.LCDC);
+    var enable = Memory.readBit(LCDC, 7);
     if (enable) {
-        this.drawBackground();
+        this.drawBackground(LCDC);
         this.drawWindow();
     }
 };
 
-Screen.prototype.drawBackground = function() {
-    if (!Memory.readBit(this.LCDC, 0)) {
+Screen.prototype.drawBackground = function(LCDC) {
+    if (!Memory.readBit(LCDC, 0)) {
         return;
     }
 
     var buffer = new Array(256*256);
-    var mapStart = Memory.readBit(this.LCDC, 3) ? this.tilemap.START_1 : this.tilemap.START_0;
+    var mapStart = Memory.readBit(LCDC, 3) ? this.tilemap.START_1 : this.tilemap.START_0;
     // browse BG tilemap
     for (var i = 0; i < this.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
 
-        var tileData = this.readTileData(tileIndex);
+        var tileData = this.readTileData(tileIndex, LCDC);
         this.drawTile(tileData, i, buffer);
     }
 
@@ -128,8 +131,8 @@ Screen.prototype.drawTile = function(tileData, index, buffer) {
     }
 };
 
-Screen.prototype.readTileData = function(tileIndex) {
-    var dataStart = Memory.readBit(this.LCDC, 4) ? 0x8000 : 0x8800;
+Screen.prototype.readTileData = function(tileIndex, LCDC) {
+    var dataStart = Memory.readBit(LCDC, 4) ? 0x8000 : 0x8800;
     var tileSize  = 0x10; // 16 bytes / tile
     var tileData = new Array();
 

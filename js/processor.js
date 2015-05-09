@@ -48,7 +48,7 @@ Processor.prototype.stop = function() {
 Processor.prototype.frame = function() {
     this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / this.screen.FREQUENCY);
 
-    var maxInstructions = 70224;
+    var maxInstructions = this.screen.VBLANK_TIME;
     this.clock.c = 0;
 
     while (this.clock.c < maxInstructions) {
@@ -70,10 +70,10 @@ Processor.prototype.frame = function() {
         }
 
         var elapsed = this.clock.c - oldInstrCount;
+        this.screen.update(elapsed);
         this.timer.update(elapsed);
         this.checkInterrupt();
     }
-    this.screen.drawFrame();
 };
 
 Processor.prototype.fetchOpcode = function() {

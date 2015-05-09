@@ -1,5 +1,6 @@
 var Screen = function(canvas, cpu) {
     cpu.screen = this;
+    this.cpu = cpu;
     this.WIDTH = 160;
     this.HEIGHT = 144;
     this.PIXELSIZE = 2;
@@ -23,11 +24,57 @@ var Screen = function(canvas, cpu) {
     };
     this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
     this.LCDC = 0;
+    this.VBLANK_TIME = 70224;
+    this.clock = 0;
+    this.mode = 2;
+    this.line = 0;
 
     canvas.width = this.WIDTH * this.PIXELSIZE;
     canvas.height = this.HEIGHT * this.PIXELSIZE;
 
     this.context = canvas.getContext('2d');
+};
+
+Screen.prototype.update = function(clockElapsed) {
+    this.clock += clockElapsed;
+
+    switch (this.mode) {
+        case 0: // HBLANK
+            if (this.clock >= 204) {
+                this.clock -= 204;
+                this.line++;
+                if (this.line == 144) {
+                    this.mode = 1;
+                    this.cpu.requestInterrupt(this.cpu.INTERRUPTS.VBLANK);
+                    this.drawFrame();
+                } else {
+                    this.mode = 2;
+                }
+            }
+            break;
+        case 1: // VBLANK
+            if (this.clock >= 456) {
+                this.clock -= 456;
+                this.line++;
+            }
+            if (this.line > 153) {
+                this.line = 0;
+                this.mode = 2;
+            }
+            break;
+        case 2: // SCANLINE OAM
+            if (this.clock >= 80) {
+                this.clock -= 80;
+                this.mode = 3;
+            }
+            break;
+        case 3: // SCANLINE VRAM
+            if (this.clock >= 172) {
+                this.clock -= 172;
+                this.mode = 0;
+            }
+            break;
+    }
 };
 
 Screen.prototype.drawFrame = function() {

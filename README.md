@@ -47,7 +47,7 @@ The tests perform as follow :
 | Test               |  status  |
 |--------------------|:--------:|
 | CPU instructions   | pass     |
-| instruction timing | fail     |
+| instruction timing | pass     |
 | memory timing      | fail     |
 | DMG sound          | fail     |
 | OAM bug            | fail     |

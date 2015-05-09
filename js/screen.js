@@ -110,7 +110,7 @@ Screen.prototype.drawBackground = function(LCDC) {
     var bgy = this.deviceram(this.SCY);
     for (var x = 0; x < this.WIDTH; x++) {
         for (var y = 0; y < this.HEIGHT; y++) {
-            color = buffer[((x-bgx) & 255) + ((y-bgy) & 255) * 256]; // "n & 255" gets correct n%256 even if n<0
+            color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
             this.drawPixel(x, y, color);
         }
     }

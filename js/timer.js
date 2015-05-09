@@ -17,7 +17,7 @@ Timer.prototype.tick = function(clockElapsed) {
 };
 
 Timer.prototype.updateTimer = function(clockElapsed) {
-    if (!(this.memory[0xFF07]&0x4)) {
+    if (!(this.memory[this.TAC]&0x4)) {
         return;
     }
     this.mainTime += clockElapsed;
@@ -31,7 +31,7 @@ Timer.prototype.updateTimer = function(clockElapsed) {
     }
     threshold *= 16;
 
-    if (this.mainTime >= threshold) {
+    while (this.mainTime >= threshold) {
         this.mainTime -= threshold;
 
         this.memory[this.TIMA]++;
@@ -46,7 +46,7 @@ Timer.prototype.updateDiv = function(clockElapsed) {
     var divThreshold = 256; // DIV is 16KHz
     if (this.divTime > divThreshold) {
         this.divTime -= divThreshold;
-        var div = this.memory[this.DIV];
-        this.memory.wb(this.DIV, (div++)&0xFF);
+        var div = this.memory[this.DIV] + 1;
+        this.memory.wb(this.DIV, div&0xFF);
     }
 };

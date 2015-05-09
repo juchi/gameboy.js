@@ -7,7 +7,10 @@ var Memory = function(cpu) {
         EXTRAM_END   : 0xBFFF,
 
         SPRITE_START : 0xFE00,
-        SPRITE_END   : 0xFEFF
+        SPRITE_END   : 0xFEFF,
+
+        DEVICE_START: 0xFF00,
+        DEVICE_END:   0xFF7F
     };
 
     this.MEM_SIZE = 65536; // 64KB
@@ -23,7 +26,10 @@ Memory.prototype = new Array();
 
 Memory.prototype.reset = function() {
     this.length = this.MEM_SIZE;
-    for (var i = this.addresses.VRAM_START; i < this.addresses.VRAM_END; i++) {
+    for (var i = this.addresses.VRAM_START; i <= this.addresses.VRAM_END; i++) {
+        this[i] = 0;
+    }
+    for (var i = this.addresses.DEVICE_START; i <= this.addresses.DEVICE_END; i++) {
         this[i] = 0;
     }
 };
@@ -51,12 +57,16 @@ Memory.prototype.vram = function(address) {
     return this[address];
 };
 
-Memory.prototype.deviceram = function(address) {
+Memory.prototype.deviceram = function(address, value) {
     if (address < this.addresses.DEVICERAM_START || address > this.addresses.DEVICERAM_END) {
         throw 'Device RAM access in out of bounds address ' + address;
     }
+    if (typeof value === "undefined") {
+        return this[address];
+    } else {
+        this[address] = value;
+    }
 
-    return this[address];
 };
 Memory.prototype.wb = function(addr, value) {
     switch (addr & 0xF000) {

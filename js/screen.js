@@ -46,6 +46,7 @@ Screen.prototype.update = function(clockElapsed) {
             if (this.clock >= 204) {
                 this.clock -= 204;
                 this.line++;
+                this.deviceram(this.LY, this.line);
                 if (this.line == 144) {
                     this.mode = 1;
                     this.cpu.requestInterrupt(this.cpu.INTERRUPTS.VBLANK);
@@ -64,6 +65,7 @@ Screen.prototype.update = function(clockElapsed) {
                 this.line = 0;
                 this.mode = 2;
             }
+            this.deviceram(this.LY, this.line);
             break;
         case 2: // SCANLINE OAM
             if (this.clock >= 80) {

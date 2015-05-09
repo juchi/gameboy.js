@@ -113,6 +113,7 @@ Processor.prototype.checkInterrupt = function() {
         if ((this.memory[0xFF0F] & (1<<i)) && this.isInterruptEnable(i)) {
             this.memory[0xFF0F] &= (0xFF - (1<<i));
             this.disableInterrupts();
+            this.clock.c += 4; // 20 clocks to serve interrupt, with 16 for RSTn
             this.interruptRoutines[i](this);
             break;
         }
@@ -145,7 +146,7 @@ Processor.prototype.endSerialTransfer = function() {
     var data = this.memory[0xFF01];
     this.memory.wb(0xFF02, 0);
     this.serialHandler.out(data);
-    this.memory.wb(this.serialHandler.in());
+    this.memory.wb(0xFF01, this.serialHandler.in());
 };
 
 var map = {
@@ -702,8 +703,8 @@ var ops = {
     LDrrra: function(p, r1, r2, r3) {p.wr(r1, p.memory[ops._getRegAddr(p, r2, r3)]);p.clock.c += 8;},
     LDrn:   function(p, r1) {p.wr(r1, p.memory[p.r.pc++]);p.clock.c += 8;},
     LDrr:   function(p, r1, r2) {p.wr(r1, p.r[r2]);p.clock.c += 4;},
-    LDrar:  function(p, r1, r2) {p.memory.wb(p.r[r1]+0xFF00, p.r[r2]);p.r.pc++;p.clock.c += 8;},
-    LDrra:  function(p, r1, r2) {p.wr(r1, p.memory[p.r[r2]+0xFF00]);p.r.pc++;p.clock.c += 8;},
+    LDrar:  function(p, r1, r2) {p.memory.wb(p.r[r1]+0xFF00, p.r[r2]);p.clock.c += 8;},
+    LDrra:  function(p, r1, r2) {p.wr(r1, p.memory[p.r[r2]+0xFF00]);p.clock.c += 8;},
     LDspnn: function(p) {p.wr('sp', (p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc]);p.r.pc+=2;p.clock.c += 12;},
     LDsprr: function(p, r1, r2) {p.wr('sp', ops._getRegAddr(p, r1, r2));p.clock.c += 8;},
     LDnnar: function(p, r1) {var addr=(p.memory[p.r.pc + 1] << 8) + p.memory[p.r.pc];p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},

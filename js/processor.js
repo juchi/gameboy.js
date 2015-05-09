@@ -109,7 +109,7 @@ Processor.prototype.checkInterrupt = function() {
         return;
     }
     for (var i = 0; i < 5; i++) {
-        if (this.memory[0xFF0F] & (1<<i)) {
+        if ((this.memory[0xFF0F] & (1<<i)) && this.isInterruptEnable(i)) {
             this.memory[0xFF0F] &= (0xFF - (1<<i));
             this.disableInterrupts();
             this.interruptRoutines[i](this);
@@ -124,7 +124,7 @@ Processor.prototype.requestInterrupt = function(type) {
 };
 
 Processor.prototype.isInterruptEnable = function(type) {
-    return this.memory[0xFFFF]&(1<<type) != 0;
+    return (this.memory[0xFFFF]&(1<<type)) != 0;
 };
 
 Processor.prototype.enableInterrupts = function() {

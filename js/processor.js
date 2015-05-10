@@ -1,12 +1,4 @@
 var Processor = function() {
-
-    this.INTERRUPTS = {
-        VBLANK: 0,
-        LCDC:   1,
-        TIMER:  2,
-        SERIAL: 3,
-        HILO:   4
-    };
     this.interruptRoutines = {
         0: function(p){ops.RSTn(p, 0x40);},
         1: function(p){ops.RSTn(p, 0x48);},
@@ -22,6 +14,14 @@ var Processor = function() {
     this.usingBootRom = false;
 
     this.createDevices();
+};
+
+Processor.INTERRUPTS = {
+    VBLANK: 0,
+    LCDC:   1,
+    TIMER:  2,
+    SERIAL: 3,
+    HILO:   4
 };
 
 Processor.prototype.createDevices = function() {

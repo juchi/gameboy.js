@@ -1,4 +1,4 @@
-Rom = function() {};
+var Rom = function() {};
 
 Rom.prototype.requestFile = function(filename, cb) {
     var xhr = new XMLHttpRequest();

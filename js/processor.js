@@ -149,6 +149,10 @@ Processor.prototype.endSerialTransfer = function() {
     this.memory.wb(0xFF01, this.serialHandler.in());
 };
 
+Processor.prototype.resetDivTimer = function() {
+    this.timer.resetDiv();
+};
+
 var map = {
     0x00: function(p){p.clock.c += 4;},
     0x01: function(p){ops.LDrrnn(p, 'B', 'C');},

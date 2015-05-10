@@ -50,3 +50,8 @@ Timer.prototype.updateDiv = function(clockElapsed) {
         this.memory.wb(this.DIV, div&0xFF);
     }
 };
+
+Timer.prototype.resetDiv = function() {
+    this.divTime = 0;
+    this.memory.wb(this.DIV, 0);
+};

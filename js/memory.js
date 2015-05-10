@@ -84,6 +84,9 @@ Memory.prototype.wb = function(addr, value) {
                     this.cpu.enableSerialTransfer();
                 }
             }
+            if (addr == 0xFF04) {
+                this.cpu.resetDivTimer();
+            }
         default:
             this[addr] = value;
     }

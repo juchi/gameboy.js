@@ -46,13 +46,13 @@ Screen.prototype.update = function(clockElapsed) {
             if (this.clock >= 204) {
                 this.clock -= 204;
                 this.line++;
-                this.deviceram(this.LY, this.line);
+                this.updateLY();
                 if (this.line == 144) {
-                    this.mode = 1;
+                    this.setMode(1);
                     this.cpu.requestInterrupt(this.cpu.INTERRUPTS.VBLANK);
                     this.drawFrame();
                 } else {
-                    this.mode = 2;
+                    this.setMode(2);
                 }
             }
             break;
@@ -63,22 +63,49 @@ Screen.prototype.update = function(clockElapsed) {
             }
             if (this.line > 153) {
                 this.line = 0;
-                this.mode = 2;
+                this.setMode(2);
             }
-            this.deviceram(this.LY, this.line);
+            this.updateLY();
             break;
         case 2: // SCANLINE OAM
             if (this.clock >= 80) {
                 this.clock -= 80;
-                this.mode = 3;
+                this.setMode(3);
             }
             break;
         case 3: // SCANLINE VRAM
             if (this.clock >= 172) {
                 this.clock -= 172;
-                this.mode = 0;
+                this.setMode(0);
             }
             break;
+    }
+};
+
+Screen.prototype.updateLY = function() {
+    this.deviceram(this.LY, this.line);
+    var STAT = this.deviceram(this.STAT);
+    if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
+        this.deviceram(this.STAT, STAT | (1 << 2));
+        if (STAT & (1 << 6)) {
+            this.cpu.requestInterrupt(this.cpu.INTERRUPTS.LCDC);
+        }
+    } else {
+        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
+    }
+};
+
+Screen.prototype.setMode = function(mode) {
+    this.mode = mode;
+    var newSTAT = this.deviceram(this.STAT);
+    newSTAT &= 0xFC;
+    newSTAT |= mode;
+    this.deviceram(this.STAT, newSTAT);
+
+    if (mode < 3) {
+        if (newSTAT & (1 << (3+mode))) {
+            this.cpu.requestInterrupt(this.cpu.INTERRUPTS.LCDC);
+        }
     }
 };
 

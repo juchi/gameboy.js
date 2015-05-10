@@ -16,15 +16,21 @@ var Processor = function() {
     };
 
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
-    this.clock = {c: 0, serial: 0};
-    this.memory = new Memory(this);
     this.IME = true;
+    this.clock = {c: 0, serial: 0};
     this.isHalted = false;
+    this.usingBootRom = false;
+
+    this.createDevices();
+};
+
+Processor.prototype.createDevices = function() {
+    this.memory = new Memory(this);
+    this.timer = new Timer(this, this.memory);
+
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
     this.serialHandler = ConsoleSerial;
-    this.timer = new Timer(this, this.memory);
-    this.usingBootRom = false;
 };
 
 Processor.prototype.reset = function() {

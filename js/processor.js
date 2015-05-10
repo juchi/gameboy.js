@@ -11,6 +11,7 @@ var Processor = function() {
     this.IME = true;
     this.clock = {c: 0, serial: 0};
     this.isHalted = false;
+    this.isPaused = false;
     this.usingBootRom = false;
 
     this.createDevices();
@@ -57,12 +58,14 @@ Processor.prototype.stop = function() {
 };
 
 Processor.prototype.frame = function() {
-    this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / this.screen.FREQUENCY);
+    if (!this.isPaused) {
+        this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / this.screen.FREQUENCY);
+    }
 
-    var maxInstructions = this.screen.VBLANK_TIME;
     this.clock.c = 0;
+    var vblank = false;
 
-    while (this.clock.c < maxInstructions) {
+    while (!vblank) {
         var oldInstrCount = this.clock.c;
         if (!this.isHalted) {
             var opcode = this.fetchOpcode();
@@ -81,7 +84,7 @@ Processor.prototype.frame = function() {
         }
 
         var elapsed = this.clock.c - oldInstrCount;
-        this.screen.update(elapsed);
+        vblank = this.screen.update(elapsed);
         this.timer.update(elapsed);
         this.checkInterrupt();
     }
@@ -114,6 +117,15 @@ Processor.prototype.halt = function() {
 };
 Processor.prototype.unhalt = function() {
     this.isHalted = false;
+};
+Processor.prototype.pause = function() {
+    this.isPaused = true;
+};
+Processor.prototype.unpause = function() {
+    this.isPaused = false;
+    if (!this.nextFrameTimer) {
+        this.frame();
+    }
 };
 
 Processor.prototype.checkInterrupt = function() {

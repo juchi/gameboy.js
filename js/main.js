@@ -16,3 +16,11 @@ Gameboy.prototype.startRom = function(data) {
     this.cpu.loadRom(data);
     this.cpu.run();
 };
+
+Gameboy.prototype.pause = function(value) {
+    if (value) {
+        this.cpu.pause();
+    } else {
+        this.cpu.unpause();
+    }
+};

@@ -40,6 +40,7 @@ var Screen = function(canvas, cpu) {
 
 Screen.prototype.update = function(clockElapsed) {
     this.clock += clockElapsed;
+    var vblank = false;
 
     switch (this.mode) {
         case 0: // HBLANK
@@ -49,6 +50,7 @@ Screen.prototype.update = function(clockElapsed) {
                 this.updateLY();
                 if (this.line == 144) {
                     this.setMode(1);
+                    vblank = true;
                     this.cpu.requestInterrupt(Processor.INTERRUPTS.VBLANK);
                     this.drawFrame();
                 } else {
@@ -80,6 +82,8 @@ Screen.prototype.update = function(clockElapsed) {
             }
             break;
     }
+
+    return vblank;
 };
 
 Screen.prototype.updateLY = function() {

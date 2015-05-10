@@ -24,13 +24,13 @@ var Processor = function() {
     this.enableSerial = 0;
     this.serialHandler = ConsoleSerial;
     this.timer = new Timer(this, this.memory);
+    this.usingBootRom = false;
 };
 
 Processor.prototype.reset = function() {
     this.memory.reset();
 
     this.r.sp = 0xFFFE;
-    this.r.pc = 0x0100;
 };
 
 Processor.prototype.loadRom = function(data) {
@@ -38,6 +38,11 @@ Processor.prototype.loadRom = function(data) {
 };
 
 Processor.prototype.run = function() {
+    if (this.usingBootRom) {
+        this.r.pc = 0x0000;
+    } else {
+        this.r.pc = 0x0100;
+    }
     this.frame();
 };
 

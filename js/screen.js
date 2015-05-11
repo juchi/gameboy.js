@@ -62,12 +62,13 @@ Screen.prototype.update = function(clockElapsed) {
             if (this.clock >= 456) {
                 this.clock -= 456;
                 this.line++;
+                if (this.line > 153) {
+                    this.line = 0;
+                    this.setMode(2);
+                }
+                this.updateLY();
             }
-            if (this.line > 153) {
-                this.line = 0;
-                this.setMode(2);
-            }
-            this.updateLY();
+
             break;
         case 2: // SCANLINE OAM
             if (this.clock >= 80) {
@@ -157,20 +158,28 @@ Screen.prototype.drawTile = function(tileData, index, buffer) {
         var b1 = tileData.shift();
         var b2 = tileData.shift();
 
-        for (var pixel = 7; pixel >= 0; pixel--) {
-            var colorValue = ((b1 & (1 << pixel)) >> pixel) + ((b2 & (1 << pixel)) >> pixel)*2;
-            buffer[(x*8 + 7-pixel) + ((y*8)+line) * 256] = colorValue;
+        for (var pixel = 0; pixel < 8; pixel++) {
+            var mask = (1 << (7-pixel));
+            var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+            var bufferIndex = (x*8 + pixel) + (y*8 + line) * 256
+            buffer[bufferIndex] = colorValue;
         }
     }
 };
 
 Screen.prototype.readTileData = function(tileIndex, LCDC) {
-    var dataStart = Memory.readBit(LCDC, 4) ? 0x8000 : 0x8800;
+    var dataStart;
+    if (Memory.readBit(LCDC, 4)) {
+        dataStart = 0x8000;
+    } else {
+        dataStart = 0x8800;
+        tileIndex = (tileIndex & 0x80 ? tileIndex-256 : tileIndex) + 128;
+    }
     var tileSize  = 0x10; // 16 bytes / tile
     var tileData = new Array();
 
-    tileStart = dataStart + (tileIndex*tileSize);
-    for (var i = tileStart; i < tileStart + tileSize; i++) {
+    var tileAddressStart = dataStart + (tileIndex * tileSize);
+    for (var i = tileAddressStart; i < tileAddressStart + tileSize; i++) {
         tileData.push(this.vram(i));
     }
 

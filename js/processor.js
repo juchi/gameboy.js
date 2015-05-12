@@ -122,8 +122,8 @@ Processor.prototype.pause = function() {
     this.isPaused = true;
 };
 Processor.prototype.unpause = function() {
-    this.isPaused = false;
-    if (!this.nextFrameTimer) {
+    if (this.isPaused) {
+        this.isPaused = false;
         this.frame();
     }
 };

@@ -3,13 +3,13 @@ var Screen = function(canvas, cpu) {
     this.cpu = cpu;
     this.WIDTH = 160;
     this.HEIGHT = 144;
-    this.PIXELSIZE = 2;
+    this.PIXELSIZE = 1;
     this.FREQUENCY = 60;
     this.colors = [
-        '#FFF',
-        '#AAA',
-        '#555',
-        '#000'
+        0xFF,
+        0xAA,
+        0x55,
+        0x00
     ];
     this.LCDC= 0xFF40;
     this.STAT= 0xFF41;
@@ -36,6 +36,7 @@ var Screen = function(canvas, cpu) {
     canvas.height = this.HEIGHT * this.PIXELSIZE;
 
     this.context = canvas.getContext('2d');
+    this.imageData = this.context.createImageData(canvas.width, canvas.height);
 };
 
 Screen.prototype.update = function(clockElapsed) {
@@ -115,14 +116,13 @@ Screen.prototype.setMode = function(mode) {
 };
 
 Screen.prototype.drawFrame = function() {
-
-    this.clearScreen();
     var LCDC = this.deviceram(this.LCDC);
     var enable = Memory.readBit(LCDC, 7);
     if (enable) {
         this.drawBackground(LCDC);
         this.drawWindow();
     }
+    this.context.putImageData(this.imageData, 0, 0);
 };
 
 Screen.prototype.drawBackground = function(LCDC) {
@@ -195,9 +195,9 @@ Screen.prototype.clearScreen = function() {
     this.context.fillRect(0, 0, this.WIDTH * this.PIXELSIZE, this.HEIGHT * this.PIXELSIZE);
 };
 Screen.prototype.drawPixel = function(x, y, color) {
-    if (this.colors[color] == '#FFF') {
-        return;
-    }
-    this.context.fillStyle = this.colors[color];
-    this.context.fillRect(x * this.PIXELSIZE, y * this.PIXELSIZE, this.PIXELSIZE, this.PIXELSIZE);
+    var v = this.colors[color];
+    this.imageData.data[(y * 160 + x) * 4] = v;
+    this.imageData.data[(y * 160 + x) * 4 + 1] = v;
+    this.imageData.data[(y * 160 + x) * 4 + 2] = v;
+    this.imageData.data[(y * 160 + x) * 4 + 3] = 255;
 };

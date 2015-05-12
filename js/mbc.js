@@ -68,7 +68,6 @@ MBC3.prototype.manageWrite = function(addr, value) {
             value &= 0x7F;
             if (value == 0) value = 1;
             this.romBankNumber = value;
-            console.log('switch ROM bank to '+ this.romBankNumber);
             this.memory.loadRomBank(this.romBankNumber);
             break;
         case 0x4000: case 0x5000: // RAM bank

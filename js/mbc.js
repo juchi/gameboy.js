@@ -4,7 +4,7 @@ MBC.getMbcInstance = function(memory, type) {
     var instance;
     switch (type) {
         case 0x00:
-            instance = new MBCdummy();
+            instance = new MBC0(memory);
             break;
         case 0x01:
             instance = new MBC1(memory);
@@ -82,8 +82,8 @@ MBC3.prototype.manageWrite = function(addr, value) {
     }
 };
 
-var MBCdummy = function() {};
+var MBC0 = function(memory) {this.memory = memory;};
 
-MBCdummy.prototype.manageWrite = function() {
-    console.error('ROM writing is not supported with MBC type 0');
+MBC0.prototype.manageWrite = function(addr, value) {
+    this.memory.loadRomBank(value);
 };

@@ -21,15 +21,11 @@ Games are not runnable yet.
 
 All of the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
 
-The LCD display is usable in background mode and allows the display of the tests,
-but it's not stable as display progress is not written back into the dedicated registers.
-Also, the display performance is quite poor for now as it cannot run at the original 60Hz.
+The LCD display is usable in background mode but the window is not supported.
 
 The serial port can be used by the program as an output, the received bytes are displayed in the console (this is mainly used for tests).
 
 The following features are in progress or partially working:
-* LCD background (the display registers are not updated as expected)
-* LCD printing (performance to improve)
 * Timer (seems buggy as "memory timing" test fails)
 * MBC (only MBC 1 is supported)
 

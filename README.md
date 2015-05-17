@@ -15,13 +15,16 @@ The execution starts automatically at address 0x0100 which is the start address 
 Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but most tests fail.
 See the Tests section for more details.
 
-Games are not runnable yet.
+Some games are runnable but not playable as some key features (like sprites) are missing.
 
 ## Features
 
 All of the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
 
-The LCD display is usable in background mode but the window is not supported.
+The LCD display is usable in background mode but the window is not supported yet.
+
+User input is available : arrow keys are mapped to the keyboard arrows,
+and A, B, START and SELECT are mapped to G, B, H, N respectively.
 
 The serial port can be used by the program as an output, the received bytes are displayed in the console (this is mainly used for tests).
 
@@ -32,7 +35,6 @@ The following features are in progress or partially working:
 The following features are not currently supported at all:
 * sprites
 * window display
-* user input
 * sound
 * boot program
 * external RAM (cartridge RAM)

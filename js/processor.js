@@ -93,7 +93,7 @@ Processor.prototype.frame = function() {
 };
 
 Processor.prototype.fetchOpcode = function() {
-    var opcode = this.memory[this.r.pc++];
+    var opcode = this.memory.rb(this.r.pc++);
     if (opcode === undefined) {console.log(opcode + ' at ' + (this.r.pc-1).toString(16));this.stop();return;}
     if (!map[opcode]) {
         console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
@@ -135,8 +135,10 @@ Processor.prototype.checkInterrupt = function() {
         return;
     }
     for (var i = 0; i < 5; i++) {
-        if ((this.memory[0xFF0F] & (1<<i)) && this.isInterruptEnable(i)) {
-            this.memory[0xFF0F] &= (0xFF - (1<<i));
+        var IFval = this.memory.rb(0xFF0F);
+        if (Memory.readBit(IFval, i) && this.isInterruptEnable(i)) {
+            IFval &= (0xFF - (1<<i));
+            this.memory.wb(0xFF0F, IFval);
             this.disableInterrupts();
             this.clock.c += 4; // 20 clocks to serve interrupt, with 16 for RSTn
             this.interruptRoutines[i](this);
@@ -146,12 +148,14 @@ Processor.prototype.checkInterrupt = function() {
 };
 
 Processor.prototype.requestInterrupt = function(type) {
-    this.memory[0xFF0F] |= (1 << type);
+    var IFval = this.memory.rb(0xFF0F);
+    IFval |= (1 << type)
+    this.memory.wb(0xFF0F, IFval) ;
     this.unhalt();
 };
 
 Processor.prototype.isInterruptEnable = function(type) {
-    return (this.memory[0xFFFF]&(1<<type)) != 0;
+    return Memory.readBit(this.memory.rb(0xFFFF), type) != 0;
 };
 
 Processor.prototype.enableInterrupts = function() {
@@ -168,7 +172,7 @@ Processor.prototype.enableSerialTransfer = function() {
 
 Processor.prototype.endSerialTransfer = function() {
     this.enableSerial = 0;
-    var data = this.memory[0xFF01];
+    var data = this.memory.rb(0xFF01);
     this.memory.wb(0xFF02, 0);
     this.serialHandler.out(data);
     this.memory.wb(0xFF01, this.serialHandler.in());

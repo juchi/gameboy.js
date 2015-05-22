@@ -26,7 +26,7 @@ Input.prototype.releaseKey = function(key) {
 };
 
 Input.prototype.update = function() {
-    var value = this.memory[this.P1];
+    var value = this.memory.rb(this.P1);
     value = (~value) & 0x30;
     if (value & 0x10) { // direction keys
         value |= this.state & 0x0F;
@@ -37,7 +37,7 @@ Input.prototype.update = function() {
     }
     value = (~value) & 0x3F;
 
-    if (this.memory[this.P1] & ~value & 0x0F) {
+    if (this.memory.rb(this.P1) & ~value & 0x0F) {
         this.cpu.requestInterrupt(Processor.INTERRUPTS.HILO);
         console.log('hilo interrupt');
     }

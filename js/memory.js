@@ -68,6 +68,11 @@ Memory.prototype.deviceram = function(address, value) {
     }
 
 };
+
+Memory.prototype.rb = function (addr) {
+    return this[addr];
+};
+
 Memory.prototype.wb = function(addr, value) {
     if (addr < 0x8000) {
         this.mbc.manageWrite(addr, value);

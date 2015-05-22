@@ -6,8 +6,8 @@ var Memory = function(cpu) {
         EXTRAM_START : 0xA000,
         EXTRAM_END   : 0xBFFF,
 
-        SPRITE_START : 0xFE00,
-        SPRITE_END   : 0xFEFF,
+        OAM_START : 0xFE00,
+        OAM_END   : 0xFE9F,
 
         DEVICE_START: 0xFF00,
         DEVICE_END:   0xFF7F
@@ -88,10 +88,19 @@ Memory.prototype.wb = function(addr, value) {
             if (addr == 0xFF04) {
                 this.cpu.resetDivTimer();
             }
+            if (addr == 0xFF46) { // OAM DMA transfer
+                this.dmaTransfer(value);
+            }
         }
-        this[addr] = value;
     }
 }
+
+Memory.prototype.dmaTransfer = function(startAddressPrefix) {
+    var startAddress = (startAddressPrefix << 8);
+    for (var i = 0; i < 0xA0; i++) {
+        this[this.addresses.OAM_START + i] = this[startAddress + i];
+    }
+};
 
 Memory.readBit = function(byte, index) {
     return (byte >> index) & 1;

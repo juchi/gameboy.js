@@ -191,7 +191,7 @@ Screen.prototype.drawSprites = function(LCDC) {
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
             color = buffer[x + y * 160];
-            if (color === undefined) continue;
+            if (color === undefined || color === 0) continue;
             this.drawPixel(x, y, color);
         }
     }

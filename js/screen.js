@@ -1,10 +1,7 @@
 var Screen = function(canvas, cpu) {
     cpu.screen = this;
     this.cpu = cpu;
-    this.WIDTH = 160;
-    this.HEIGHT = 144;
-    this.PIXELSIZE = 1;
-    this.FREQUENCY = 60;
+
     this.colors = [
         0xFF,
         0xAA,
@@ -19,24 +16,35 @@ var Screen = function(canvas, cpu) {
     this.LYC = 0xFF45;
 
     this.vram = cpu.memory.vram.bind(cpu.memory);
-    this.tilemap = {
-        HEIGHT: 32,
-        WIDTH: 32,
-        START_0: 0x9800,
-        START_1: 0x9C00,
-        LENGTH: 0x0400 // 1024 bytes = 32*32
-    };
+
+    this.OAM_START = 0xFE00;
+    this.OAM_END   = 0xFE9F;
     this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
     this.VBLANK_TIME = 70224;
     this.clock = 0;
     this.mode = 2;
     this.line = 0;
 
-    canvas.width = this.WIDTH * this.PIXELSIZE;
-    canvas.height = this.HEIGHT * this.PIXELSIZE;
+    canvas.width = Screen.physics.WIDTH * Screen.physics.PIXELSIZE;
+    canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
 
     this.context = canvas.getContext('2d');
     this.imageData = this.context.createImageData(canvas.width, canvas.height);
+};
+
+Screen.physics = {
+    WIDTH    : 160,
+    HEIGHT   : 144,
+    PIXELSIZE: 1,
+    FREQUENCY: 60
+};
+
+Screen.tilemap = {
+    HEIGHT: 32,
+    WIDTH: 32,
+    START_0: 0x9800,
+    START_1: 0x9C00,
+    LENGTH: 0x0400 // 1024 bytes = 32*32
 };
 
 Screen.prototype.update = function(clockElapsed) {
@@ -131,9 +139,9 @@ Screen.prototype.drawBackground = function(LCDC) {
     }
 
     var buffer = new Array(256*256);
-    var mapStart = Memory.readBit(LCDC, 3) ? this.tilemap.START_1 : this.tilemap.START_0;
+    var mapStart = Memory.readBit(LCDC, 3) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
     // browse BG tilemap
-    for (var i = 0; i < this.tilemap.LENGTH; i++) {
+    for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
 
         var tileData = this.readTileData(tileIndex, LCDC);
@@ -142,8 +150,8 @@ Screen.prototype.drawBackground = function(LCDC) {
 
     var bgx = this.deviceram(this.SCX);
     var bgy = this.deviceram(this.SCY);
-    for (var x = 0; x < this.WIDTH; x++) {
-        for (var y = 0; y < this.HEIGHT; y++) {
+    for (var x = 0; x < Screen.physics.WIDTH; x++) {
+        for (var y = 0; y < Screen.physics.HEIGHT; y++) {
             color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
             this.drawPixel(x, y, color);
         }
@@ -192,7 +200,7 @@ Screen.prototype.drawWindow = function() {
 
 Screen.prototype.clearScreen = function() {
     this.context.fillStyle = '#FFF';
-    this.context.fillRect(0, 0, this.WIDTH * this.PIXELSIZE, this.HEIGHT * this.PIXELSIZE);
+    this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
 };
 Screen.prototype.drawPixel = function(x, y, color) {
     var v = this.colors[color];

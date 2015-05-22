@@ -60,7 +60,7 @@ Processor.prototype.stop = function() {
 
 Processor.prototype.frame = function() {
     if (!this.isPaused) {
-        this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / this.screen.FREQUENCY);
+        this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / Screen.physics.FREQUENCY);
     }
 
     this.clock.c = 0;

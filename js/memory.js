@@ -58,6 +58,14 @@ Memory.prototype.vram = function(address) {
     return this[address];
 };
 
+Memory.prototype.oamram = function(address) {
+    if (address < this.addresses.OAM_START || address > this.addresses.OAM_END) {
+        throw 'OAMRAM access in out of bounds address ' + address;
+    }
+
+    return this[address];
+};
+
 Memory.prototype.deviceram = function(address, value) {
     if (address < this.addresses.DEVICERAM_START || address > this.addresses.DEVICERAM_END) {
         throw 'Device RAM access in out of bounds address ' + address;

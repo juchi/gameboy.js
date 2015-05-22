@@ -15,25 +15,31 @@ The execution starts automatically at address 0x0100 which is the start address 
 Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but most tests fail.
 See the Tests section for more details.
 
-Some games are runnable but not playable as some key features (like sprites) are missing.
+Currently, some games are runnable (tested with Tetris, Super Mario) but are very slow.
+It is not yet defined whether it's a timing bug in the emulator or if the emulator itself is running too slow.
+This needs further investigation.
 
 ## Features
 
-All of the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
+### Devices
 
-The LCD display is usable in background mode but the window is not supported yet.
+The LCD screen is usable with background and sprite display but the window is not supported yet.
 
 User input is available : arrow keys are mapped to the keyboard arrows,
 and A, B, START and SELECT are mapped to G, B, H, N respectively.
 
 The serial port can be used by the program as an output, the received bytes are displayed in the console (this is mainly used for tests).
 
+### Internal processes
+
+All of the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
+
 The following features are in progress or partially working:
 * Timer (seems buggy as "memory timing" test fails)
+* sprites (no support for sprite flags)
 * MBC (only MBC 1 is supported)
 
 The following features are not currently supported at all:
-* sprites
 * window display
 * sound
 * boot program

@@ -32,6 +32,7 @@ Memory.prototype.reset = function() {
     for (var i = this.addresses.DEVICE_START; i <= this.addresses.DEVICE_END; i++) {
         this[i] = 0;
     }
+    this[0xFFFF] = 0;
 };
 
 Memory.prototype.setRomData = function(data) {

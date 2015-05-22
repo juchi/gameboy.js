@@ -35,7 +35,6 @@ MBC1.prototype.manageWrite = function(addr, value) {
             if (value == 0) value = 1;
             var mask = this.mode ? 0 : 0xE0;
             this.romBankNumber = (this.romBankNumber & mask) +value;
-            console.log('switch ROM bank to '+ this.romBankNumber);
             this.memory.loadRomBank(this.romBankNumber);
             break;
         case 0x4000: case 0x5000: // RAM bank or high bits ROM

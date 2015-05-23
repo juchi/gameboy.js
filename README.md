@@ -7,7 +7,8 @@ It's a work in progress, see the Features section.
 
 ## How to run
 
-It is only needed to open the `index.html` in a web browser, no additional dependencies are required.
+Once the project is cloned, it is only needed to open the `index.html` in a web browser, no additional dependencies are required.
+You can also directly go to the [demo site](http://juchi.github.io/gameboy.js/).
 
 There is no boot program provided (nor supported).
 The execution starts automatically at address 0x0100 which is the start address of all ROMs.

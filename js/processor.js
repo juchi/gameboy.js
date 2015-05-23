@@ -45,6 +45,16 @@ Processor.prototype.loadRom = function(data) {
     this.memory.setRomData(data);
 };
 
+Processor.prototype.getGameName = function() {
+    var name = '';
+    for (var i = 0x134; i < 0x143; i++) {
+        var char = this.memory.rb(i) || 32;
+        name += String.fromCharCode(char);
+    }
+
+    return name;
+};
+
 Processor.prototype.run = function() {
     if (this.usingBootRom) {
         this.r.pc = 0x0000;

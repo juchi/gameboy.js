@@ -184,8 +184,10 @@ Screen.prototype.drawSprites = function(LCDC) {
         if (y == 0 || y >= 160 || x == 0 || x >= 168) {
             continue;
         }
+        var xflip = Memory.readBit(flags, 5);
+        var yflip = Memory.readBit(flags, 6);
         var tileData = this.readTileData(tileIndex, 0x8000);
-        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH);
+        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip);
     }
 
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
@@ -197,15 +199,19 @@ Screen.prototype.drawSprites = function(LCDC) {
     }
 };
 
-Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth) {
+Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip) {
+    xflip = xflip || 0;
+    yflip = yflip || 0;
     for (var line = 0; line < 8; line++) {
+        var l = yflip ? 7 - line : line;
         var b1 = tileData.shift();
         var b2 = tileData.shift();
 
         for (var pixel = 0; pixel < 8; pixel++) {
             var mask = (1 << (7-pixel));
             var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
-            var bufferIndex = (x + pixel) + (y + line) * bufferWidth;
+            var p = xflip ? 7 - pixel : pixel;
+            var bufferIndex = (x + p) + (y + l) * bufferWidth;
             buffer[bufferIndex] = colorValue;
         }
     }

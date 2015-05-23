@@ -14,6 +14,8 @@ var Screen = function(canvas, cpu) {
     this.SCX = 0xFF43;
     this.LY  = 0xFF44;
     this.LYC = 0xFF45;
+    this.WY  = 0xFF4A;
+    this.WX  = 0xFF4B;
 
     this.vram = cpu.memory.vram.bind(cpu.memory);
 
@@ -232,6 +234,35 @@ Screen.prototype.readTileData = function(tileIndex, dataStart) {
 Screen.prototype.drawWindow = function(LCDC) {
     if (!Memory.readBit(LCDC, 5)) {
         return;
+    }
+
+    var buffer = new Array(256*256);
+    var mapStart = Memory.readBit(LCDC, 6) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
+    // browse Window tilemap
+    for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
+        var tileIndex = this.vram(i + mapStart);
+
+        var dataStart;
+        if (Memory.readBit(LCDC, 4)) {
+            dataStart = 0x8000;
+        } else {
+            dataStart = 0x8800;
+            tileIndex = (tileIndex & 0x80 ? tileIndex-256 : tileIndex) + 128;
+        }
+
+        var tileData = this.readTileData(tileIndex, dataStart);
+        var x = i % Screen.tilemap.WIDTH;
+        var y = (i / Screen.tilemap.WIDTH) | 0;
+        this.drawTile(tileData, x * 8, y * 8, buffer, 256);
+    }
+
+    var wx = this.deviceram(this.WX) - 7;
+    var wy = this.deviceram(this.WY);
+    for (var x = wx; x < Screen.physics.WIDTH; x++) {
+        for (var y = wy; y < Screen.physics.HEIGHT; y++) {
+            color = buffer[(x & 255) + (y & 255) * 256];
+            this.drawPixel(x, y, color);
+        }
     }
 };
 

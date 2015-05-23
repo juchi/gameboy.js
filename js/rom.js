@@ -13,6 +13,9 @@ Rom.prototype.requestFile = function(filename, cb) {
 };
 
 Rom.prototype.load = function(file, cb) {
+    if (file === undefined) {
+        return;
+    }
     var fr = new FileReader();
     fr.onload = function() {
         var rom = new Uint8Array(fr.result);

@@ -7,11 +7,15 @@
 </head>
 <body>
 
-<h1>Gameboy emulator</h1>
+<header>
+    <h1>Gameboy emulator</h1>
+</header>
 
-<canvas id="canvas">Your browser does not seem to support canvas.</canvas>
+<div id="container">
 
-<p>
+<div class="canvas-container"><canvas id="canvas">Your browser does not seem to support canvas.</canvas></div>
+
+<p class="commands">
     <button onclick="g.pause(true);">Pause</button>
     <button onclick="g.pause(false);">Run</button>
 </p>
@@ -26,6 +30,8 @@
 </p>
 
 <footer>by Juchi</footer>
+
+</div>
 
 <script type="text/javascript" src="./js/debug.js"></script>
 <script type="text/javascript" src="./js/serial.js"></script>

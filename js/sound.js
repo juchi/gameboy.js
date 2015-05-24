@@ -1,8 +1,11 @@
 var APU = function() {
     this.enabled = false;
+    this.channel1 = new Channel1();
 };
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;
+
+    this.channel1.update(clockElapsed);
 };
 
 APU.prototype.manageWrite = function(addr, value) {
@@ -11,6 +14,56 @@ APU.prototype.manageWrite = function(addr, value) {
     }
 };
 
+var Channel1 = function() {
+    this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
+    this.soundLength = 64; // defaults to 64 periods
+    this.envelopeStepLength = 0x10000;// 1/ 64 seconds of instructions
+
+    this.clockLength = 0;
+    this.clockEnvelop = 0;
+
+    this.envelopeStep = 0;
+
+    var audioContext = new AudioContext();
+    var oscillator = audioContext.createOscillator();
+    oscillator.connect(audioContext.destination);
+    oscillator.type = 'square';
+    oscillator.frequency.value = 1000;
+
+    this.audioContext = audioContext;
+    this.oscillator = oscillator;
+};
+
+Channel1.prototype.play = function() {
+    this.oscillator.connect(this.audioContext.destination);
+};
+Channel1.prototype.stop = function() {
+    this.oscillator.disconnect();
+};
+Channel1.prototype.update = function(clockElapsed) {
+    this.clockLength += clockElapsed;
+    this.clockEnvelop += clockElapsed;
+
+    if (this.clockEnvelop > this.envelopeStepLength) {
+        this.envelopeStep--;
+        if (this.envelopeStep == 0) {
+            this.stop();
+        }
+    }
+
+    if (this.lengthCheck && this.clockLength > this.soundLengthUnit * this.soundLength) {
+        this.stop();
+    }
+};
+Channel1.prototype.setFrequency = function(value) {
+    this.oscillator.frequency.value = value;
+};
+Channel1.prototype.getFrequency = function() {
+    return this.oscillator.frequency.value;
+};
+Channel1.prototype.setLength = function(value) {
+    this.soundLength = 64 - (value & 0x3F);
+};
 
 APU.registers = {
     NR10: 0xFF10,

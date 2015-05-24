@@ -87,7 +87,7 @@ Memory.prototype.wb = function(addr, value) {
         this.mbc.manageWrite(addr, value);
     } else {
         this[addr] = value;
-        if ((addr & 0xF000) == 0xF000) {
+        if ((addr & 0xFF00) == 0xFF00) {
             if (addr == 0xFF02) {
                 if (value & 0x80) {
                     this.cpu.enableSerialTransfer();
@@ -98,6 +98,10 @@ Memory.prototype.wb = function(addr, value) {
             }
             if (addr == 0xFF46) { // OAM DMA transfer
                 this.dmaTransfer(value);
+            }
+
+            if (addr >= 0xFF10 && addr <= 0xFF26) { // sound registers
+                this.cpu.apu.manageWrite(addr, value);
             }
         }
     }

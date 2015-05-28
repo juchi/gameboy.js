@@ -32,7 +32,7 @@ APU.prototype.manageWrite = function(addr, value) {
             break;
         case 0xFF12:
             // todo : bit 3
-            var envelopeVolume = (value & 0x70) >> 4;
+            var envelopeVolume = (value & 0xF0) >> 4;
             this.channel1.setEnvelopeVolume(envelopeVolume);
             this.channel1.envelopeStep = (value & 0x07);
             break;
@@ -58,7 +58,7 @@ APU.prototype.manageWrite = function(addr, value) {
             break;
         case 0xFF17:
             // todo : bit 3
-            var envelopeVolume = (value & 0x70) >> 4;
+            var envelopeVolume = (value & 0xF0) >> 4;
             this.channel2.setEnvelopeVolume(envelopeVolume);
             this.channel2.envelopeStep = (value & 0x07);
             break;

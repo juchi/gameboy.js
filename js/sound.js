@@ -12,6 +12,33 @@ APU.prototype.manageWrite = function(addr, value) {
     if (addr == 0xFF26) {
         this.enabled = (value & 0x80) == 0 ? false : true;
     }
+    switch (addr) {
+        case 0xFF10:
+            // todo
+            break;
+        case 0xFF11:
+            // todo : bits 6-7
+            this.channel1.setLength(value & 0x3F);
+            break;
+        case 0xFF12:
+            // todo : bits 3-7
+            this.envelopeStep = (value & 0x07);
+            break;
+        case 0xFF13:
+            var frequency = this.channel1.getFrequency();
+            frequency &= 0xF00;
+            frequency |= value;
+            this.channel1.setFrequency(frequency);
+            break;
+        case 0xFF14:
+            var frequency = this.channel1.getFrequency();
+            frequency &= 0xFF;
+            frequency |= (value & 3) << 8;
+            this.channel1.setFrequency(frequency);
+            this.channel1.lengthCheck = (value & 0x40) ? true : false;
+            if (value & 0x80) this.channel1.play();
+            break;
+    }
 };
 
 var Channel1 = function() {
@@ -21,14 +48,15 @@ var Channel1 = function() {
 
     this.clockLength = 0;
     this.clockEnvelop = 0;
+    this.lengthCheck = false;
 
     this.envelopeStep = 0;
 
     var audioContext = new AudioContext();
     var oscillator = audioContext.createOscillator();
-    oscillator.connect(audioContext.destination);
     oscillator.type = 'square';
     oscillator.frequency.value = 1000;
+    oscillator.start();
 
     this.audioContext = audioContext;
     this.oscillator = oscillator;
@@ -45,13 +73,16 @@ Channel1.prototype.update = function(clockElapsed) {
     this.clockEnvelop += clockElapsed;
 
     if (this.clockEnvelop > this.envelopeStepLength) {
+        this.clockEnvelop -= this.envelopeStepLength;
         this.envelopeStep--;
-        if (this.envelopeStep == 0) {
+        if (this.envelopeStep <= 0) {
+            this.envelopeStep = 0;
             this.stop();
         }
     }
 
     if (this.lengthCheck && this.clockLength > this.soundLengthUnit * this.soundLength) {
+        this.clockLength -= this.soundLengthUnit * this.soundLength;
         this.stop();
     }
 };

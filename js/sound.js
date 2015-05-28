@@ -3,16 +3,21 @@ var APU = function() {
 
     var audioContext = new AudioContext();
     this.channel1 = new Channel1(audioContext);
+    this.channel2 = new Channel1(audioContext);
 };
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;
 
     this.channel1.update(clockElapsed);
+    this.channel2.update(clockElapsed);
 };
 
 APU.prototype.manageWrite = function(addr, value) {
     if (addr == 0xFF26) {
         this.enabled = (value & 0x80) == 0 ? false : true;
+        if (!this.enabled) {
+            // todo stop sound
+        }
     }
     switch (addr) {
         case 0xFF10:
@@ -44,6 +49,32 @@ APU.prototype.manageWrite = function(addr, value) {
             this.channel1.setFrequency(frequency);
             this.channel1.lengthCheck = (value & 0x40) ? true : false;
             if (value & 0x80) this.channel1.play();
+            break;
+
+
+        case 0xFF16:
+            // todo : bits 6-7
+            this.channel2.setLength(value & 0x3F);
+            break;
+        case 0xFF17:
+            // todo : bit 3
+            var envelopeVolume = (value & 0x70) >> 4;
+            this.channel2.setEnvelopeVolume(envelopeVolume);
+            this.channel2.envelopeStep = (value & 0x07);
+            break;
+        case 0xFF18:
+            var frequency = this.channel2.getFrequency();
+            frequency &= 0xF00;
+            frequency |= value;
+            this.channel2.setFrequency(frequency);
+            break;
+        case 0xFF19:
+            var frequency = this.channel2.getFrequency();
+            frequency &= 0xFF;
+            frequency |= (value & 3) << 8;
+            this.channel2.setFrequency(frequency);
+            this.channel2.lengthCheck = (value & 0x40) ? true : false;
+            if (value & 0x80) this.channel2.play();
             break;
     }
 };
@@ -133,7 +164,7 @@ Channel1.prototype.setLength = function(value) {
 Channel1.prototype.setEnvelopeVolume = function(volume) {
     this.envelopeCheck = volume ? true : false;
     this.envelopeVolume = volume;
-    this.gainNode.gain.value = this.envelopeVolume * 1/16;
+    this.gainNode.gain.value = this.envelopeVolume * 1/100;
 }
 
 APU.registers = {

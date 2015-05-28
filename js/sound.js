@@ -1,6 +1,8 @@
 var APU = function() {
     this.enabled = false;
-    this.channel1 = new Channel1();
+
+    var audioContext = new AudioContext();
+    this.channel1 = new Channel1(audioContext);
 };
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;
@@ -24,7 +26,9 @@ APU.prototype.manageWrite = function(addr, value) {
             this.channel1.setLength(value & 0x3F);
             break;
         case 0xFF12:
-            // todo : bits 3-7
+            // todo : bit 3
+            var envelopeVolume = (value & 0x70) >> 4;
+            this.channel1.setEnvelopeVolume(envelopeVolume);
             this.channel1.envelopeStep = (value & 0x07);
             break;
         case 0xFF13:
@@ -44,7 +48,7 @@ APU.prototype.manageWrite = function(addr, value) {
     }
 };
 
-var Channel1 = function() {
+var Channel1 = function(audioContext) {
     this.playing = false;
 
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
@@ -59,31 +63,35 @@ var Channel1 = function() {
 
     this.envelopeStep = 0;
     this.envelopeStepLength = 0x10000;// 1 / 64 seconds of instructions
+    this.envelopeCheck = false;
 
     this.clockLength = 0;
     this.clockEnvelop = 0;
     this.clockSweep = 0;
 
-    var audioContext = new AudioContext();
+    var gainNode = audioContext.createGain();
+    gainNode.gain.value = 0;
     var oscillator = audioContext.createOscillator();
     oscillator.type = 'square';
     oscillator.frequency.value = 1000;
+    oscillator.connect(gainNode);
     oscillator.start();
 
     this.audioContext = audioContext;
+    this.gainNode = gainNode;
     this.oscillator = oscillator;
 };
 
 Channel1.prototype.play = function() {
     this.playing = true;
-    this.oscillator.connect(this.audioContext.destination);
+    this.gainNode.connect(this.audioContext.destination);
     this.clockLength = 0;
     this.clockEnvelop = 0;
     this.clockSweep = 0;
 };
 Channel1.prototype.stop = function() {
     this.playing = false;
-    this.oscillator.disconnect();
+    this.gainNode.disconnect();
 };
 Channel1.prototype.update = function(clockElapsed) {
     if (!this.playing) return;
@@ -99,12 +107,12 @@ Channel1.prototype.update = function(clockElapsed) {
         this.setFrequency(oldFreq + this.sweepSign * oldFreq / Math.pow(2, this.sweepShifts));
     }
 
-    if (this.clockEnvelop > this.envelopeStepLength) {
+    if (this.envelopeCheck && this.clockEnvelop > this.envelopeStepLength) {
         this.clockEnvelop -= this.envelopeStepLength;
         this.envelopeStep--;
+        this.setEnvelopeVolume(this.envelopeVolume - 1);
         if (this.envelopeStep <= 0) {
-            this.envelopeStep = 0;
-            this.stop();
+            this.envelopeCheck = false;
         }
     }
 
@@ -122,6 +130,11 @@ Channel1.prototype.getFrequency = function() {
 Channel1.prototype.setLength = function(value) {
     this.soundLength = 64 - (value & 0x3F);
 };
+Channel1.prototype.setEnvelopeVolume = function(volume) {
+    this.envelopeCheck = volume ? true : false;
+    this.envelopeVolume = volume;
+    this.gainNode.gain.value = this.envelopeVolume * 1/16;
+}
 
 APU.registers = {
     NR10: 0xFF10,

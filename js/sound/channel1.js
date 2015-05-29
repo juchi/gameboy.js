@@ -36,6 +36,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
 };
 
 Channel1.prototype.play = function() {
+    if (this.playing) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.gainNode.connect(this.audioContext.destination);
@@ -49,9 +50,6 @@ Channel1.prototype.stop = function() {
     this.gainNode.disconnect();
 };
 Channel1.prototype.update = function(clockElapsed) {
-    if (!this.playing) return;
-
-    this.clockLength  += clockElapsed;
     this.clockEnvelop += clockElapsed;
     this.clockSweep   += clockElapsed;
 
@@ -71,9 +69,16 @@ Channel1.prototype.update = function(clockElapsed) {
         }
     }
 
-    if (this.lengthCheck && this.clockLength > this.soundLengthUnit * this.soundLength) {
-        this.clockLength = 0;
-        this.stop();
+    if (this.lengthCheck) {
+        this.clockLength += clockElapsed;
+        if (this.clockLength > this.soundLengthUnit) {
+            this.soundLength--;
+            this.clockLength -= this.soundLengthUnit;
+            if (this.soundLength == 0) {
+                this.setLength(0);
+                this.stop();
+            }
+        }
     }
 };
 Channel1.prototype.setFrequency = function(value) {

@@ -30,6 +30,7 @@ var Channel3 = function(apu, channelNumber, audioContext) {
 
 };
 Channel3.prototype.play = function() {
+    if (this.playing) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.waveBuffer.copyToChannel(this.buffer, 0, 0);
@@ -43,13 +44,16 @@ Channel3.prototype.stop = function() {
     this.gainNode.disconnect();
 };
 Channel3.prototype.update = function(clockElapsed) {
-    if (!this.playing) return;
-
-    this.clockLength  += clockElapsed;
-
-    if (this.lengthCheck && this.clockLength > this.soundLengthUnit * this.soundLength) {
-        this.clockLength = 0;
-        this.stop();
+    if (this.lengthCheck){
+        this.clockLength  += clockElapsed;
+        if (this.clockLength > this.soundLengthUnit) {
+            this.soundLength--;
+            this.clockLength -= this.soundLengthUnit;
+            if (this.soundLength == 0) {
+                this.setLength(0);
+                this.stop();
+            }
+        }
     }
 };
 Channel3.prototype.setFrequency = function(value) {

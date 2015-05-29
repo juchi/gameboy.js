@@ -13,6 +13,7 @@ var Channel4 = function(apu, channelNumber, audioContext) {
 };
 
 Channel4.prototype.play = function() {
+    if (this.playing) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.clockLength = 0;
@@ -22,11 +23,16 @@ Channel4.prototype.stop = function() {
     this.apu.setSoundFlag(this.channelNumber, 0);
 };
 Channel4.prototype.update = function(clockElapsed) {
-    if (!this.playing) return;
-
-    if (this.lengthCheck && this.clockLength > this.soundLengthUnit * this.soundLength) {
-        this.clockLength = 0;
-        this.stop();
+    if (this.lengthCheck) {
+        this.clockLength  += clockElapsed;
+        if (this.clockLength > this.soundLengthUnit) {
+            this.soundLength--;
+            this.clockLength -= this.soundLengthUnit;
+            if (this.soundLength == 0) {
+                this.setLength(0);
+                this.stop();
+            }
+        }
     }
 };
 Channel4.prototype.setLength = function(value) {

@@ -14,6 +14,7 @@ APU.prototype.update = function(clockElapsed) {
     this.channel1.update(clockElapsed);
     this.channel2.update(clockElapsed);
     this.channel3.update(clockElapsed);
+    this.channel4.update(clockElapsed);
 };
 APU.prototype.setSoundFlag = function(channel, value) {
     var mask = 0xFF - (1 << (channel - 1));

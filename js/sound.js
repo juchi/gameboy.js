@@ -3,8 +3,8 @@ var APU = function(memory) {
     this.enabled = false;
 
     var audioContext = new AudioContext();
-    this.channel1 = new Channel1(audioContext);
-    this.channel2 = new Channel1(audioContext);
+    this.channel1 = new Channel1(this, 1, audioContext);
+    this.channel2 = new Channel1(this, 2, audioContext);
 };
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;
@@ -100,7 +100,9 @@ APU.prototype.manageWrite = function(addr, value) {
     }
 };
 
-var Channel1 = function(audioContext) {
+var Channel1 = function(apu, channelNumber, audioContext) {
+    this.apu = apu;
+    this.channelNumber = channelNumber;
     this.playing = false;
 
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
@@ -136,6 +138,7 @@ var Channel1 = function(audioContext) {
 
 Channel1.prototype.play = function() {
     this.playing = true;
+    this.apu.setSoundFlag(this.channelNumber, 1);
     this.gainNode.connect(this.audioContext.destination);
     this.clockLength = 0;
     this.clockEnvelop = 0;
@@ -143,6 +146,7 @@ Channel1.prototype.play = function() {
 };
 Channel1.prototype.stop = function() {
     this.playing = false;
+    this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
 };
 Channel1.prototype.update = function(clockElapsed) {

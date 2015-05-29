@@ -41,7 +41,7 @@ APU.prototype.manageWrite = function(addr, value) {
             this.channel1.setLength(value & 0x3F);
             break;
         case 0xFF12:
-            // todo : bit 3
+            this.channel1.envelopeSign = (value & 0x08) ? 1 : -1;
             var envelopeVolume = (value & 0xF0) >> 4;
             this.channel1.setEnvelopeVolume(envelopeVolume);
             this.channel1.envelopeStep = (value & 0x07);
@@ -67,7 +67,7 @@ APU.prototype.manageWrite = function(addr, value) {
             this.channel2.setLength(value & 0x3F);
             break;
         case 0xFF17:
-            // todo : bit 3
+            this.channel2.envelopeSign = (value & 0x08) ? 1 : -1;
             var envelopeVolume = (value & 0xF0) >> 4;
             this.channel2.setEnvelopeVolume(envelopeVolume);
             this.channel2.envelopeStep = (value & 0x07);
@@ -151,6 +151,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
     this.envelopeStep = 0;
     this.envelopeStepLength = 0x10000;// 1 / 64 seconds of instructions
     this.envelopeCheck = false;
+    this.envelopeSign = 1;
 
     this.clockLength = 0;
     this.clockEnvelop = 0;
@@ -199,7 +200,7 @@ Channel1.prototype.update = function(clockElapsed) {
     if (this.envelopeCheck && this.clockEnvelop > this.envelopeStepLength) {
         this.clockEnvelop -= this.envelopeStepLength;
         this.envelopeStep--;
-        this.setEnvelopeVolume(this.envelopeVolume - 1);
+        this.setEnvelopeVolume(this.envelopeVolume + this.envelopeSign);
         if (this.envelopeStep <= 0) {
             this.envelopeCheck = false;
         }

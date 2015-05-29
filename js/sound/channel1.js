@@ -13,6 +13,8 @@ var Channel1 = function(apu, channelNumber, audioContext) {
     this.sweepShifts = 0;
     this.sweepSign = 1; // +1 / -1 for increase / decrease freq
 
+    this.frequency = 0;
+
     this.envelopeStep = 0;
     this.envelopeStepLength = 0x10000;// 1 / 64 seconds of instructions
     this.envelopeCheck = false;
@@ -43,21 +45,39 @@ Channel1.prototype.play = function() {
     this.clockLength = 0;
     this.clockEnvelop = 0;
     this.clockSweep = 0;
+    if (this.sweepShifts > 0) this.checkFreqSweep();
 };
 Channel1.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
 };
+Channel1.prototype.checkFreqSweep = function() {
+    var oldFreq = this.getFrequency();
+    var newFreq = oldFreq + this.sweepSign * (oldFreq >> this.sweepShifts);
+    if (newFreq > 0x7FF) {
+        newFreq = 0;
+        this.stop();
+    }
+
+    return newFreq;
+};
 Channel1.prototype.update = function(clockElapsed) {
     this.clockEnvelop += clockElapsed;
     this.clockSweep   += clockElapsed;
 
-    if (this.sweepCount && this.clockSweep > (this.sweepStepLength * this.sweepTime)) {
+    if ((this.sweepCount || this.sweepTime) && this.clockSweep > (this.sweepStepLength * this.sweepTime)) {
         this.clockSweep -= (this.sweepStepLength * this.sweepTime);
         this.sweepCount--;
-        var oldFreq = this.getFrequency();
-        this.setFrequency(oldFreq + this.sweepSign * oldFreq / Math.pow(2, this.sweepShifts));
+
+        var newFreq = this.checkFreqSweep(); // process and check new freq
+
+        this.apu.memory[0xFF13] = newFreq & 0xFF;
+        this.apu.memory[0xFF14] &= 0xF8;
+        this.apu.memory[0xFF14] |= (newFreq & 0x700) >> 8;
+        this.setFrequency(newFreq);
+
+        this.checkFreqSweep(); // check again with new value
     }
 
     if (this.envelopeCheck && this.clockEnvelop > this.envelopeStepLength) {
@@ -82,17 +102,17 @@ Channel1.prototype.update = function(clockElapsed) {
     }
 };
 Channel1.prototype.setFrequency = function(value) {
-    this.oscillator.frequency.value = 131072 / (2048 - value);
+    this.frequency = value;
+    this.oscillator.frequency.value = 131072 / (2048 - this.frequency);
 };
 Channel1.prototype.getFrequency = function() {
-    return 2048 - 131072 / this.oscillator.frequency.value;
+    return this.frequency;
 };
 Channel1.prototype.setLength = function(value) {
     this.soundLength = 64 - (value & 0x3F);
 };
 Channel1.prototype.setEnvelopeVolume = function(volume) {
     this.envelopeCheck = volume > 0 && volume < 16 ? true : false;
-    if (!this.envelopeCheck)this.stop();
     this.envelopeVolume = volume;
     this.gainNode.gain.value = this.envelopeVolume * 1/100;
 };

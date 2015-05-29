@@ -33,10 +33,11 @@ APU.prototype.manageWrite = function(addr, value) {
 
     switch (addr) {
         case 0xFF10:
-            this.sweepTime = ((value & 0x70) >> 4)&7;
-            this.sweepSign = (value & 0x08) ? -1 : 1;
-            this.sweepShifts = (value & 0x7);
-            this.sweepCount = this.sweepShifts;
+            this.channel1.clockSweep = 0;
+            this.channel1.sweepTime = ((value & 0x70) >> 4);
+            this.channel1.sweepSign = (value & 0x08) ? -1 : 1;
+            this.channel1.sweepShifts = (value & 0x07);
+            this.channel1.sweepCount = this.channel1.sweepShifts;
             break;
         case 0xFF11:
             // todo : bits 6-7

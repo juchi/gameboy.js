@@ -49,3 +49,10 @@ Gameboy.prototype.setStatus = function(status) {
 Gameboy.prototype.setGameName = function(name) {
     this.gameNameContainer.innerText = name;
 };
+Gameboy.prototype.setSoundEnabled = function(value) {
+    if (value) {
+        this.cpu.apu.connect();
+    } else {
+        this.cpu.apu.disconnect();
+    }
+};

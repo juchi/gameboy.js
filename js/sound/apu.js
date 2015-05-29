@@ -3,10 +3,22 @@ var APU = function(memory) {
     this.enabled = false;
 
     var audioContext = new AudioContext();
+
     this.channel1 = new Channel1(this, 1, audioContext);
     this.channel2 = new Channel1(this, 2, audioContext);
     this.channel3 = new Channel3(this, 3, audioContext);
     this.channel4 = new Channel4(this, 4, audioContext);
+
+};
+APU.prototype.connect = function() {
+    this.channel1.enable();
+    this.channel2.enable();
+    this.channel3.enable();
+};
+APU.prototype.disconnect = function() {
+    this.channel1.disable();
+    this.channel2.disable();
+    this.channel3.disable();
 };
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;

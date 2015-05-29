@@ -19,14 +19,16 @@
     <button onclick="g.pause(true);">Pause</button>
     <button onclick="g.pause(false);">Run</button>
 </p>
+<p class="commands">
+    <label><input type="checkbox" onchange="g.setSoundEnabled(this.checked);"/> Enable sound (experimental)</label>
+</p>
 
 <p>
     <span id="status"></span> <span id="game-name"></span>
 </p>
 
 <p>
-    <label for="file">Choose a ROM file on your computer:</label>
-    <input type="file" id="file"/>
+    <label>Choose a ROM file on your computer: <input type="file" id="file"/></label>
 </p>
 
 <footer>by Juchi</footer>
@@ -52,6 +54,7 @@
 
 <script>
 var g = new Gameboy(document.getElementById('canvas'));
+g.setSoundEnabled(false);
 </script>
 </body>
 </html>

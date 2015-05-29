@@ -100,6 +100,8 @@ var apuMask = [
 Memory.prototype.wb = function(addr, value) {
     if (addr < 0x8000) {
         this.mbc.manageWrite(addr, value);
+    } else if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers
+        this.cpu.apu.manageWrite(addr, value);
     } else {
         this[addr] = value;
         if ((addr & 0xFF00) == 0xFF00) {
@@ -113,10 +115,6 @@ Memory.prototype.wb = function(addr, value) {
             }
             if (addr == 0xFF46) { // OAM DMA transfer
                 this.dmaTransfer(value);
-            }
-
-            if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers
-                this.cpu.apu.manageWrite(addr, value);
             }
         }
     }

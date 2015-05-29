@@ -1,4 +1,5 @@
-var APU = function() {
+var APU = function(memory) {
+    this.memory = memory;
     this.enabled = false;
 
     var audioContext = new AudioContext();
@@ -11,14 +12,21 @@ APU.prototype.update = function(clockElapsed) {
     this.channel1.update(clockElapsed);
     this.channel2.update(clockElapsed);
 };
+APU.prototype.setSoundFlag = function(channel, value) {
+    var mask = 0xFF - (1 << (channel - 1));
+    value = value << (channel - 1)
+    var byteValue = this.memory.rb(APU.registers.NR52);
+    byteValue &= mask;
+    byteValue |= value;
+    this.memory[APU.registers.NR52] = byteValue;
+}
 
 APU.prototype.manageWrite = function(addr, value) {
-    if (addr == 0xFF26) {
-        this.enabled = (value & 0x80) == 0 ? false : true;
-        if (!this.enabled) {
-            // todo stop sound
-        }
+    if (this.enabled == false && addr < APU.registers.NR52) {
+        return;
     }
+    this.memory[addr] = value;
+
     switch (addr) {
         case 0xFF10:
             this.sweepTime = ((value & 0x70) >> 4)&7;
@@ -74,7 +82,20 @@ APU.prototype.manageWrite = function(addr, value) {
             frequency |= (value & 7) << 8;
             this.channel2.setFrequency(frequency);
             this.channel2.lengthCheck = (value & 0x40) ? true : false;
-            if (value & 0x80) this.channel2.play();
+            if (value & 0x80) {
+                this.channel2.play();
+            }
+            break;
+
+        case 0xFF26:
+            value &= 0xF0;
+            this.memory[addr] = value;
+            this.enabled = (value & 0x80) == 0 ? false : true;
+            if (!this.enabled) {
+                for (var i = 0xFF10; i < 0xFF27; i++)
+                    this.memory[i] = 0;
+                // todo stop sound
+            }
             break;
     }
 };

@@ -29,7 +29,7 @@ Processor.prototype.createDevices = function() {
     this.memory = new Memory(this);
     this.timer = new Timer(this, this.memory);
     this.input = null;
-    this.apu = new APU();
+    this.apu = new APU(this.memory);
 
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;

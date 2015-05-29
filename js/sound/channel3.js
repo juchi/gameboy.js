@@ -1,4 +1,6 @@
-var Channel3 = function(audioContext) {
+var Channel3 = function(apu, channelNumber, audioContext) {
+    this.apu = apu;
+    this.channelNumber = channelNumber;
     this.playing = false;
 
     this.soundLength = 0;
@@ -29,6 +31,7 @@ var Channel3 = function(audioContext) {
 };
 Channel3.prototype.play = function() {
     this.playing = true;
+    this.apu.setSoundFlag(this.channelNumber, 1);
     this.waveBuffer.copyToChannel(this.buffer, 0, 0);
 
     this.gainNode.connect(this.audioContext.destination);
@@ -36,6 +39,7 @@ Channel3.prototype.play = function() {
 };
 Channel3.prototype.stop = function() {
     this.playing = false;
+    this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
 };
 Channel3.prototype.update = function(clockElapsed) {

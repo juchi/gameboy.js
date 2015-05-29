@@ -5,7 +5,8 @@ var APU = function(memory) {
     var audioContext = new AudioContext();
     this.channel1 = new Channel1(this, 1, audioContext);
     this.channel2 = new Channel1(this, 2, audioContext);
-    this.channel3 = new Channel3(audioContext);
+    this.channel3 = new Channel3(this, 3, audioContext);
+    this.channel4 = new Channel4(this, 4, audioContext);
 };
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;
@@ -114,6 +115,21 @@ APU.prototype.manageWrite = function(addr, value) {
                 this.channel3.play();
             }
             break;
+
+        case 0xFF20:
+            this.channel4.setLength(value & 0x3F);
+            break;
+        case 0xFF21:
+            break;
+        case 0xFF22:
+            break;
+        case 0xFF23:
+            this.channel4.lengthCheck = (value & 0x40) ? true : false;
+            if (value & 0x80) {
+                this.channel4.play();
+            }
+            break;
+
         case 0xFF30:case 0xFF31:case 0xFF32:case 0xFF33:case 0xFF34:case 0xFF35:case 0xFF36:case 0xFF37:
         case 0xFF38:case 0xFF39:case 0xFF3A:case 0xFF3B:case 0xFF3C:case 0xFF3D:case 0xFF3E:case 0xFF3F:
             var index = addr - 0xFF30;

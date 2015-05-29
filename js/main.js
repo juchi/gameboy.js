@@ -43,11 +43,11 @@ Gameboy.prototype.pause = function(value) {
 };
 
 Gameboy.prototype.setStatus = function(status) {
-    this.statusContainer.innerText = status;
+    this.statusContainer.innerHTML = status;
 };
 
 Gameboy.prototype.setGameName = function(name) {
-    this.gameNameContainer.innerText = name;
+    this.gameNameContainer.innerHTML = name;
 };
 Gameboy.prototype.setSoundEnabled = function(value) {
     if (value) {

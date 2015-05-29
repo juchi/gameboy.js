@@ -45,7 +45,7 @@ APU.prototype.manageWrite = function(addr, value) {
         case 0xFF14:
             var frequency = this.channel1.getFrequency();
             frequency &= 0xFF;
-            frequency |= (value & 3) << 8;
+            frequency |= (value & 7) << 8;
             this.channel1.setFrequency(frequency);
             this.channel1.lengthCheck = (value & 0x40) ? true : false;
             if (value & 0x80) this.channel1.play();
@@ -71,7 +71,7 @@ APU.prototype.manageWrite = function(addr, value) {
         case 0xFF19:
             var frequency = this.channel2.getFrequency();
             frequency &= 0xFF;
-            frequency |= (value & 3) << 8;
+            frequency |= (value & 7) << 8;
             this.channel2.setFrequency(frequency);
             this.channel2.lengthCheck = (value & 0x40) ? true : false;
             if (value & 0x80) this.channel2.play();
@@ -153,10 +153,10 @@ Channel1.prototype.update = function(clockElapsed) {
     }
 };
 Channel1.prototype.setFrequency = function(value) {
-    this.oscillator.frequency.value = value;
+    this.oscillator.frequency.value = 131072 / (2048 - value);
 };
 Channel1.prototype.getFrequency = function() {
-    return this.oscillator.frequency.value;
+    return 2048 - 131072 / this.oscillator.frequency.value;
 };
 Channel1.prototype.setLength = function(value) {
     this.soundLength = 64 - (value & 0x3F);

@@ -46,3 +46,13 @@ footer {
     padding: 20px 50px;
     text-align: right;
 }
+tr, td, th {
+    border:1px solid #333;
+    padding: 2px 10px;
+}
+table {
+    border-collapse: collapse;
+}
+#keyboard-info {
+    margin: 30px 0 10px;
+}

@@ -46,6 +46,23 @@ Processor.prototype.loadRom = function(data) {
     this.memory.setRomData(data);
 };
 
+Processor.prototype.getRamSize = function() {
+    var size = 0;
+    switch (this.memory.rb(0x149)) {
+        case 1:
+            size = 2048;
+            break;
+        case 2:
+            size = 2048 * 4;
+            break;
+        case 3:
+            size = 2048 * 16;
+            break;
+    }
+
+    return size;
+};
+
 Processor.prototype.getGameName = function() {
     var name = '';
     for (var i = 0x134; i < 0x143; i++) {

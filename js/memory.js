@@ -40,6 +40,7 @@ Memory.prototype.setRomData = function(data) {
     this.loadRomBank(0);
     this.mbc = MBC.getMbcInstance(this, this[0x147]);
     this.loadRomBank(1);
+    this.mbc.loadRam(this.cpu.getGameName(), this.cpu.getRamSize());
 };
 
 Memory.prototype.loadRomBank = function(index) {
@@ -83,6 +84,9 @@ Memory.prototype.rb = function (addr) {
         var mask = apuMask[addr - 0xFF10];
         return this[addr] | mask;
     }
+    if ((addr >= 0xA000 && addr < 0xC000)) {
+        return this.mbc.readRam(addr);
+    }
     return this[addr];
 };
 
@@ -98,7 +102,7 @@ var apuMask = [
 ];
 
 Memory.prototype.wb = function(addr, value) {
-    if (addr < 0x8000) {
+    if (addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000)) {
         this.mbc.manageWrite(addr, value);
     } else if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers
         this.cpu.apu.manageWrite(addr, value);

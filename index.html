@@ -20,7 +20,7 @@
     <button onclick="g.pause(false);">Run</button>
 </p>
 <p class="commands">
-    <label><input type="checkbox" onchange="g.setSoundEnabled(this.checked);"/> Enable sound (experimental)</label>
+    <label><input id="sound-enable" type="checkbox" onchange="g.setSoundEnabled(this.checked);"/> Enable sound (experimental)</label>
 </p>
 
 <p>
@@ -70,7 +70,7 @@
 
 <script>
 var g = new Gameboy(document.getElementById('canvas'));
-g.setSoundEnabled(false);
+g.setSoundEnabled(document.getElementById('sound-enable').checked);
 </script>
 </body>
 </html>

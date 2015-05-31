@@ -6,10 +6,10 @@ MBC.getMbcInstance = function(memory, type) {
         case 0x00:
             instance = new MBC0(memory);
             break;
-        case 0x01:
+        case 0x01: case 0x02: case 0x03:
             instance = new MBC1(memory);
             break;
-        case 0x13:
+        case 0x0F: case 0x10: case 0x11: case 0x12: case 0x13:
             instance = new MBC3(memory);
             break;
         default:

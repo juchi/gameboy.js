@@ -1,4 +1,6 @@
-var Processor = function() {
+var Processor = function(gameboy) {
+    this.gameboy = gameboy;
+
     this.interruptRoutines = {
         0: function(p){ops.RSTn(p, 0x40);},
         1: function(p){ops.RSTn(p, 0x48);},
@@ -91,33 +93,36 @@ Processor.prototype.frame = function() {
         this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / Screen.physics.FREQUENCY);
     }
 
-    this.clock.c = 0;
-    var vblank = false;
+    try {
+        var vblank = false;
+        while (!vblank) {
+            var oldInstrCount = this.clock.c;
+            if (!this.isHalted) {
+                var opcode = this.fetchOpcode();
+                map[opcode](this);
+                this.r.F &= 0xF0; // tmp fix
 
-    while (!vblank) {
-        var oldInstrCount = this.clock.c;
-        if (!this.isHalted) {
-            var opcode = this.fetchOpcode();
-            map[opcode](this);
-            this.r.F &= 0xF0; // tmp fix
-
-            if (this.enableSerial) {
-                var instr = this.clock.c - oldInstrCount;
-                this.clock.serial += instr;
-                if (this.clock.serial >= 8 * this.SERIAL_INTERNAL_INSTR) {
-                    this.endSerialTransfer();
+                if (this.enableSerial) {
+                    var instr = this.clock.c - oldInstrCount;
+                    this.clock.serial += instr;
+                    if (this.clock.serial >= 8 * this.SERIAL_INTERNAL_INSTR) {
+                        this.endSerialTransfer();
+                    }
                 }
+            } else {
+                this.clock.c += 4;
             }
-        } else {
-            this.clock.c += 4;
-        }
 
-        var elapsed = this.clock.c - oldInstrCount;
-        vblank = this.screen.update(elapsed);
-        this.timer.update(elapsed);
-        this.input.update();
-        this.apu.update(elapsed);
-        this.checkInterrupt();
+            var elapsed = this.clock.c - oldInstrCount;
+            vblank = this.screen.update(elapsed);
+            this.timer.update(elapsed);
+            this.input.update();
+            this.apu.update(elapsed);
+            this.checkInterrupt();
+        }
+        this.clock.c = 0;
+    } catch (e) {
+        this.gameboy.handleException(e);
     }
 };
 

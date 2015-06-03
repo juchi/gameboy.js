@@ -13,7 +13,7 @@ MBC.getMbcInstance = function(memory, type) {
             instance = new MBC3(memory);
             break;
         default:
-            throw 'MBC type not supported';
+            throw new UnimplementedException('MBC type not supported');
     }
 
     return instance;
@@ -90,7 +90,7 @@ MBC3.prototype.manageWrite = function(addr, value) {
             this.extRam.setRamBank(value);
             break;
         case 0x6000: case 0x7000: // Latch clock data
-            console.error('clock not supported');
+            throw new UnimplementedException('cartridge clock not supported', false);
             break;
         case 0xA000: case 0xB000:
             this.extRam.manageWrite(addr - 0xA000, value);

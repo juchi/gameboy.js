@@ -1,5 +1,5 @@
 var Gameboy = function(canvas) {
-    var cpu = new Processor();
+    var cpu = new Processor(this);
     var screen = new Screen(canvas, cpu);
     var input = new Input(cpu);
     cpu.input = input;
@@ -10,8 +10,9 @@ var Gameboy = function(canvas) {
     var rom = new Rom();
     var that = this;
 
-    this.statusContainer = document.getElementById('status');
+    this.statusContainer   = document.getElementById('status');
     this.gameNameContainer = document.getElementById('game-name');
+    this.errorContainer    = document.getElementById('error');
 
     document.getElementById('file').addEventListener('change', function(e){
         rom.load(e.target.files[0], that.startRom.bind(that));
@@ -25,11 +26,16 @@ var Gameboy = function(canvas) {
 };
 
 Gameboy.prototype.startRom = function(data) {
+    this.errorContainer.classList.add('hide');
     this.cpu.reset();
-    this.cpu.loadRom(data);
-    this.setStatus('Game Running :');
-    this.setGameName(this.cpu.getGameName());
-    this.cpu.run();
+    try {
+        this.cpu.loadRom(data);
+        this.setStatus('Game Running :');
+        this.setGameName(this.cpu.getGameName());
+        this.cpu.run();
+    } catch (e) {
+        this.handleException(e);
+    }
 };
 
 Gameboy.prototype.pause = function(value) {
@@ -42,8 +48,18 @@ Gameboy.prototype.pause = function(value) {
     }
 };
 
+Gameboy.prototype.error = function(message) {
+    this.setStatus('Error during execution');
+    this.setError('An error occurred during execution:' + message);
+    this.cpu.stop();
+};
+
 Gameboy.prototype.setStatus = function(status) {
     this.statusContainer.innerHTML = status;
+};
+Gameboy.prototype.setError = function(message) {
+    this.errorContainer.classList.remove('hide');
+    this.errorContainer.innerHTML = message;
 };
 
 Gameboy.prototype.setGameName = function(name) {
@@ -56,3 +72,15 @@ Gameboy.prototype.setSoundEnabled = function(value) {
         this.cpu.apu.disconnect();
     }
 };
+
+Gameboy.prototype.handleException = function(e) {
+    if (e instanceof UnimplementedException) {
+        if (e.fatal) {
+            this.error('This cartridge is not supported ('+ e.message +')');
+        } else {
+            console.error(e.message);
+        }
+    } else {
+        throw e;
+    }
+}

@@ -42,6 +42,12 @@ canvas {
     margin: 0 5px;
     padding: 5px;
 }
+#error {
+    color: #F00;
+}
+.hide {
+    display:none;
+}
 footer {
     padding: 20px 50px;
     text-align: right;

@@ -107,3 +107,4 @@ MBC0.prototype.manageWrite = function(addr, value) {
     this.memory.loadRomBank(value);
 };
 MBC0.prototype.readRam = function(addr) {return 0;};
+MBC0.prototype.loadRam = function() {};

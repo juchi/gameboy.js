@@ -35,6 +35,9 @@ MBC1.prototype.manageWrite = function(addr, value) {
     switch (addr & 0xF000) {
         case 0x0000: case 0x1000: // enable RAM
             this.ramEnabled = (value & 0x0A) ? true : false;
+            if (this.ramEnabled) {
+                this.extRam.saveRamData();
+            }
             break;
         case 0x2000: case 0x3000: // ROM bank number lower 5 bits
             value &= 0x1F;
@@ -79,6 +82,9 @@ MBC3.prototype.manageWrite = function(addr, value) {
     switch (addr & 0xF000) {
         case 0x0000: case 0x1000: // enable RAM
             this.ramEnabled = (value & 0x0A) ? true : false;
+            if (this.ramEnabled) {
+                this.extRam.saveRamData();
+            }
             break;
         case 0x2000: case 0x3000: // ROM bank number
             value &= 0x7F;

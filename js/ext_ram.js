@@ -28,8 +28,8 @@ ExtRam.prototype.setRamBank = function(bank) {
 
 ExtRam.prototype.manageWrite = function(offset, value) {
     this.extRam[this.ramBank * 8192 + offset] = value;
-    //this.saveRamData();
 };
+
 ExtRam.prototype.manageRead = function(offset) {
     return this.extRam[this.ramBank * 8192 + offset];
 };

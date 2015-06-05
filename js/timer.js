@@ -44,6 +44,7 @@ Timer.prototype.updateTimer = function(clockElapsed) {
 
 Timer.prototype.updateDiv = function(clockElapsed) {
     var divThreshold = 256; // DIV is 16KHz
+    this.divTime += clockElapsed;
     if (this.divTime > divThreshold) {
         this.divTime -= divThreshold;
         var div = this.memory.rb(this.DIV) + 1;
@@ -53,5 +54,5 @@ Timer.prototype.updateDiv = function(clockElapsed) {
 
 Timer.prototype.resetDiv = function() {
     this.divTime = 0;
-    this.memory.wb(this.DIV, 0);
+    this.memory[this.DIV] = 0; // direct write to avoid looping
 };

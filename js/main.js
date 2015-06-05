@@ -15,7 +15,7 @@ var Gameboy = function(canvas) {
     this.errorContainer    = document.getElementById('error');
 
     document.getElementById('file').addEventListener('change', function(e){
-        rom.load(e.target.files[0], that.startRom.bind(that));
+        rom.loadFromFile(e.target.files[0], that.startRom.bind(that));
     });
     document.addEventListener('keydown', function(e) {
         input.manageKeyboardPress(e.keyCode);

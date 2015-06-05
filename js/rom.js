@@ -14,7 +14,7 @@ Rom.prototype.requestFile = function(filename, cb) {
     xhr.send();
 };
 
-Rom.prototype.load = function(file, cb) {
+Rom.prototype.loadFromFile = function(file, cb) {
     if (file === undefined) {
         return;
     }

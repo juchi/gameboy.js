@@ -1,4 +1,6 @@
-var Rom = function() {};
+var Rom = function() {
+    this.data = [];
+};
 
 Rom.prototype.requestFile = function(filename, cb) {
     var xhr = new XMLHttpRequest();
@@ -17,12 +19,22 @@ Rom.prototype.load = function(file, cb) {
         return;
     }
     var fr = new FileReader();
+    var that = this;
     fr.onload = function() {
-        var rom = new Uint8Array(fr.result);
-        cb(rom);
+        that.data = new Uint8Array(fr.result);
+        cb(that);
     };
     fr.onerror = function(e) {
         console.log('Error reading the file', e.target.error.code)
     };
     fr.readAsArrayBuffer(file);
+};
+
+// Validate the checksum of the cartridge header
+Rom.prototype.validate = function() {
+    var hash = 0;
+    for (var i = 0x134; i <= 0x14C; i++) {
+        hash = hash - this.data[i] - 1;
+    }
+    return (hash & 0xFF) == this.data[0x14D];
 };

@@ -25,11 +25,16 @@ var Gameboy = function(canvas) {
     });
 };
 
-Gameboy.prototype.startRom = function(data) {
+Gameboy.prototype.startRom = function(rom) {
+    if (!rom.validate()) {
+        this.error('The file is not a valid GameBoy ROM.');
+        return;
+    }
+
     this.errorContainer.classList.add('hide');
     this.cpu.reset();
     try {
-        this.cpu.loadRom(data);
+        this.cpu.loadRom(rom.data);
         this.setStatus('Game Running :');
         this.setGameName(this.cpu.getGameName());
         this.cpu.run();

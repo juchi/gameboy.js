@@ -259,10 +259,10 @@ Screen.prototype.drawWindow = function(LCDC) {
 
     var wx = this.deviceram(this.WX) - 7;
     var wy = this.deviceram(this.WY);
-    for (var x = wx; x < Screen.physics.WIDTH; x++) {
-        for (var y = wy; y < Screen.physics.HEIGHT; y++) {
+    for (var x = Math.max(0, -wx); x < Math.min(Screen.physics.WIDTH, Screen.physics.WIDTH - wx); x++) {
+        for (var y = Math.max(0, -wy); y < Math.min(Screen.physics.HEIGHT, Screen.physics.HEIGHT - wy); y++) {
             color = buffer[(x & 255) + (y & 255) * 256];
-            this.drawPixel(x, y, color);
+            this.drawPixel(x + wx, y + wy, color);
         }
     }
 };

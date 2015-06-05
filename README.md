@@ -25,16 +25,19 @@ Currently, some games are runnable (tested with Tetris, Super Mario, Pokemon Red
 
 ### Devices
 
-The LCD screen is usable with background and sprite display but the window is not supported yet.
+The LCD screen is usable with background, window, and sprite display.
 
 User input is available : arrow keys are mapped to the keyboard arrows,
 and A, B, START and SELECT are mapped to G, B, H, N respectively.
+
+Game saves are working fine and are stored as serialized data in the LocalStorage.
 
 Sound is partially implemented (the noise channel is not done yet) and is quite
 good on Firefox (latest release) but really bad on Chrome.
 This seems to be due to the implementation of the Web Audio API.
 
-The serial port can be used by the program as an output, the received bytes are displayed in the console (this is mainly used for tests).
+The serial port can be used by the program as an output,
+the received bytes are displayed in the console (this is mainly used for tests).
 
 ### Internal processes
 
@@ -46,13 +49,11 @@ All of the standard Gameboy instructions are implemented. Super Gameboy and Game
 The following features are in progress or partially working:
 * Timer (seems buggy as "memory timing" test fails)
 * sprites (no support for sprite flags)
-* MBC (only MBC 1 is supported)
-* window display (buggy in some cases)
+* MBC (only MBC 1 and MBC 3 are partially supported)
 * sound (ok on Firefox, poor on Chrome)
 
 The following features are not currently supported at all:
 * boot program
-* external RAM (cartridge RAM)
 
 ## Tests
 

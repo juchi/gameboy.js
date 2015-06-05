@@ -1,3 +1,4 @@
+// Memory unit
 var Memory = function(cpu) {
     this.addresses = {
         VRAM_START : 0x8000,
@@ -22,6 +23,7 @@ var Memory = function(cpu) {
     this.cpu = cpu;
 };
 
+// Memory can be accessed as an Array
 Memory.prototype = new Array();
 
 Memory.prototype.reset = function() {
@@ -79,6 +81,8 @@ Memory.prototype.deviceram = function(address, value) {
 
 };
 
+// Memory read proxy function
+// Used to centralize memory read access
 Memory.prototype.rb = function (addr) {
     if (addr >= 0xFF10 && addr < 0xFF40) {
         var mask = apuMask[addr - 0xFF10];
@@ -101,6 +105,9 @@ var apuMask = [
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 ];
 
+// Memory write proxy function
+// Used to centralize memory writes and delegate specific behaviour
+// to the correct units
 Memory.prototype.wb = function(addr, value) {
     if (addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000)) {
         this.mbc.manageWrite(addr, value);
@@ -124,6 +131,7 @@ Memory.prototype.wb = function(addr, value) {
     }
 }
 
+// Start a DMA transfer (OAM data from cartrige to RAM)
 Memory.prototype.dmaTransfer = function(startAddressPrefix) {
     var startAddress = (startAddressPrefix << 8);
     for (var i = 0; i < 0xA0; i++) {
@@ -131,6 +139,7 @@ Memory.prototype.dmaTransfer = function(startAddressPrefix) {
     }
 };
 
+// Helper to extract a bit from a byte
 Memory.readBit = function(byte, index) {
     return (byte >> index) & 1;
 };

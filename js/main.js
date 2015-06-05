@@ -1,3 +1,8 @@
+// Gameboy class
+//
+// This object is the entry point of the application
+// Will delegate user actions to the emulated devices
+// and provide information where needed
 var Gameboy = function(canvas) {
     var cpu = new Processor(this);
     var screen = new Screen(canvas, cpu);
@@ -62,11 +67,12 @@ Gameboy.prototype.error = function(message) {
 Gameboy.prototype.setStatus = function(status) {
     this.statusContainer.innerHTML = status;
 };
+// Display an error message
 Gameboy.prototype.setError = function(message) {
     this.errorContainer.classList.remove('hide');
     this.errorContainer.innerHTML = message;
 };
-
+// Display an error message
 Gameboy.prototype.setGameName = function(name) {
     this.gameNameContainer.innerHTML = name;
 };

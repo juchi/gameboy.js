@@ -1,3 +1,9 @@
+// Handler for the Serial port of the Gameboy
+//
+// It is designed for debug purposes as some tests output data on the serial port
+//
+// Will regularly output the received byte (converted to string) in the console logs
+// This handler always push the value 0xFF as an input
 var ConsoleSerial = {
     current: '',
     timeout: null,

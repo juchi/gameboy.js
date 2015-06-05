@@ -1,3 +1,4 @@
+// CPU class
 var Processor = function(gameboy) {
     this.gameboy = gameboy;
 
@@ -75,6 +76,7 @@ Processor.prototype.getGameName = function() {
     return name;
 };
 
+// Start the execution of the emulator
 Processor.prototype.run = function() {
     if (this.usingBootRom) {
         this.r.pc = 0x0000;
@@ -88,6 +90,13 @@ Processor.prototype.stop = function() {
     clearTimeout(this.nextFrameTimer);
 };
 
+// Fetch-and-execute loop
+// Will execute instructions for the duration of a frame
+//
+// The screen unit will notify the vblank period which
+// is considered the end of a frame
+//
+// The function is called on a regular basis with a timeout
 Processor.prototype.frame = function() {
     if (!this.isPaused) {
         this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / Screen.physics.FREQUENCY);
@@ -164,6 +173,7 @@ Processor.prototype.unpause = function() {
     }
 };
 
+// Look for interrupt flags
 Processor.prototype.checkInterrupt = function() {
     if (!this.IME) {
         return;
@@ -181,6 +191,7 @@ Processor.prototype.checkInterrupt = function() {
     }
 };
 
+// Set an interrupt flag
 Processor.prototype.requestInterrupt = function(type) {
     var IFval = this.memory.rb(0xFF0F);
     IFval |= (1 << type)

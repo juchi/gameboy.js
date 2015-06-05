@@ -1,3 +1,7 @@
+// Each opcode (0 to 0xFF) is associated to a CPU operation
+// CPU operations are implemented separately
+// The cbmap object holds operations for CB prefixed opcodes (0xCB00 to 0xCBFF)
+// Non existent opcodes are commented out and marked empty
 var map = {
     0x00: function(p){p.clock.c += 4;},
     0x01: function(p){ops.LDrrnn(p, 'B', 'C');},

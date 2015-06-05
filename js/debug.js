@@ -1,3 +1,4 @@
+// Output a range of 16 memory addresses
 function view_memory(addr, memory) {
     addr = addr & 0xFFF0;
     var pad = '00';

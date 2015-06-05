@@ -1,3 +1,4 @@
+// Object for mapping the cartridge RAM
 var ExtRam = function() {
     this.extRam = null;
     this.ramSize = 0;

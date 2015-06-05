@@ -36,7 +36,8 @@ APU.prototype.setSoundFlag = function(channel, value) {
     byteValue |= value;
     this.memory[APU.registers.NR52] = byteValue;
 };
-
+// Manage writes to audio registers
+// Will update the channels depending on the address
 APU.prototype.manageWrite = function(addr, value) {
     if (this.enabled == false && addr < APU.registers.NR52) {
         return;

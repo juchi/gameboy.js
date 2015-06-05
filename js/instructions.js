@@ -1,3 +1,19 @@
+// List of CPU operations
+// Most operations have been factorized here to limit code redundancy
+//
+// How to read operations:
+// Uppercase letters qualify the kind of operation (LD = LOAD, INC = INCREMENT, etc.)
+// Lowercase letters are used to hint parameters :
+// r = register, n = 1 memory byte, sp = sp register,
+// a = suffix for memory address, i = bit index
+// Example : LDrrar = LOAD operation with two-registers memory address
+// as first parameter and one register value as second
+//
+// Underscore-prefixed functions are here to delegate the logic between similar operations
+//
+// Some helper functions are defined at the end of the object
+//
+// It's up to each operation to update the CPU clock
 var ops = {
     LDrrnn: function(p, r1, r2) {p.wr(r2, p.memory.rb(p.r.pc));p.wr(r1, p.memory.rb(p.r.pc+1)); p.r.pc+=2;p.clock.c += 12;},
     LDrrar: function(p, r1, r2, r3) {ops._LDav(p, ops._getRegAddr(p, r1, r2), p.r[r3]);p.clock.c += 8;},

@@ -17,7 +17,7 @@ function view_memory(addr, memory) {
 }
 
 function view_tile(screen, index) {
-    var tileData = screen.readTileData(index, 0b11100011);
+    var tileData = screen.readTileData(index, 0x8800);
 
     var pixelData = new Array(8 * 8)
     for (var line = 0; line < 8; line++) {

@@ -9,7 +9,8 @@ It's a work in progress, see the Features section.
 
 Tested on:
 * Firefox
-* Chrome (not advised because of sound issues)
+* Chrome (sound issues)
+* Safari (sound issues)
 
 ## How to run
 
@@ -33,8 +34,8 @@ and A, B, START and SELECT are mapped to G, B, H, N respectively.
 Game saves are working fine and are stored as serialized data in the LocalStorage.
 
 Sound is partially implemented (the noise channel is not done yet) and is quite
-good on Firefox (latest release) but really bad on Chrome.
-This seems to be due to the implementation of the Web Audio API.
+good on Firefox (latest release) but really bad on Chrome and Safari.
+This seems to be due to the implementation of the Web Audio API in webkit.
 
 The serial port can be used by the program as an output,
 the received bytes are displayed in the console (this is mainly used for tests).

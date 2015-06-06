@@ -145,16 +145,21 @@ Screen.prototype.drawBackground = function(LCDC) {
 
     var buffer = new Array(256*256);
     var mapStart = Memory.readBit(LCDC, 3) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
+
+    var dataStart, signedIndex = false;
+    if (Memory.readBit(LCDC, 4)) {
+        dataStart = 0x8000;
+    } else {
+        dataStart = 0x8800;
+        signedIndex = true;
+    }
+
     // browse BG tilemap
     for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
 
-        var dataStart;
-        if (Memory.readBit(LCDC, 4)) {
-            dataStart = 0x8000;
-        } else {
-            dataStart = 0x8800;
-            tileIndex = (tileIndex & 0x80 ? tileIndex-256 : tileIndex) + 128;
+        if (signedIndex) {
+            tileIndex = ops._getSignedValue(tileIndex) + 128;
         }
 
         var tileData = this.readTileData(tileIndex, dataStart);
@@ -239,16 +244,21 @@ Screen.prototype.drawWindow = function(LCDC) {
 
     var buffer = new Array(256*256);
     var mapStart = Memory.readBit(LCDC, 6) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
+
+    var dataStart, signedIndex = false;
+    if (Memory.readBit(LCDC, 4)) {
+        dataStart = 0x8000;
+    } else {
+        dataStart = 0x8800;
+        signedIndex = true;
+    }
+
     // browse Window tilemap
     for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
 
-        var dataStart;
-        if (Memory.readBit(LCDC, 4)) {
-            dataStart = 0x8000;
-        } else {
-            dataStart = 0x8800;
-            tileIndex = (tileIndex & 0x80 ? tileIndex-256 : tileIndex) + 128;
+        if (signedIndex) {
+            tileIndex = ops._getSignedValue(tileIndex) + 128;
         }
 
         var tileData = this.readTileData(tileIndex, dataStart);

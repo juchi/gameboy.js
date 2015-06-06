@@ -2,6 +2,7 @@ var APU = function(memory) {
     this.memory = memory;
     this.enabled = false;
 
+    AudioContext = window.AudioContext || window.webkitAudioContext;
     var audioContext = new AudioContext();
 
     this.channel1 = new Channel1(this, 1, audioContext);

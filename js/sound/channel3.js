@@ -22,7 +22,7 @@ var Channel3 = function(apu, channelNumber, audioContext) {
     bufferSource.buffer = waveBuffer;
     bufferSource.loop = true;
     bufferSource.connect(gainNode);
-    bufferSource.start();
+    bufferSource.start(0);
 
     this.audioContext = audioContext;
     this.waveBuffer = waveBuffer;

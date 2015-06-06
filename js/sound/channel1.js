@@ -30,7 +30,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
     oscillator.type = 'square';
     oscillator.frequency.value = 1000;
     oscillator.connect(gainNode);
-    oscillator.start();
+    oscillator.start(0);
 
     this.audioContext = audioContext;
     this.gainNode = gainNode;

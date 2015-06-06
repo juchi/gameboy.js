@@ -154,6 +154,8 @@ Screen.prototype.drawBackground = function(LCDC) {
         signedIndex = true;
     }
 
+    // cache object to store read tiles from this frame
+    var cacheTile = {};
     // browse BG tilemap
     for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
@@ -162,7 +164,9 @@ Screen.prototype.drawBackground = function(LCDC) {
             tileIndex = ops._getSignedValue(tileIndex) + 128;
         }
 
-        var tileData = this.readTileData(tileIndex, dataStart);
+        // try to retrieve the tile data from the cache, or use readTileData() to read from ram
+        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
+
         var x = i % Screen.tilemap.WIDTH;
         var y = (i / Screen.tilemap.WIDTH) | 0;
         this.drawTile(tileData, x * 8, y * 8, buffer, 256);
@@ -210,10 +214,11 @@ Screen.prototype.drawSprites = function(LCDC) {
 Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip) {
     xflip = xflip || 0;
     yflip = yflip || 0;
+    var byteIndex = 0;
     for (var line = 0; line < 8; line++) {
         var l = yflip ? 7 - line : line;
-        var b1 = tileData.shift();
-        var b2 = tileData.shift();
+        var b1 = tileData[byteIndex++];
+        var b2 = tileData[byteIndex++];
 
         for (var pixel = 0; pixel < 8; pixel++) {
             var mask = (1 << (7-pixel));

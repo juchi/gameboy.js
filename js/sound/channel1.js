@@ -1,3 +1,6 @@
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
 var Channel1 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
@@ -122,3 +125,5 @@ Channel1.prototype.disable = function() {
 Channel1.prototype.enable = function() {
     this.oscillator.connect(this.gainNode);
 };
+GameboyJS.Channel1 = Channel1;
+}(GameboyJS || (GameboyJS = {})));

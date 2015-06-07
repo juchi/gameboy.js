@@ -1,3 +1,5 @@
+var GameboyJS;
+(function (GameboyJS) {
 // Handler for the Serial port of the Gameboy
 //
 // It is designed for debug purposes as some tests output data on the serial port
@@ -25,3 +27,5 @@ var ConsoleSerial = {
         ConsoleSerial.current = '';
     }
 };
+GameboyJS.ConsoleSerial = ConsoleSerial;
+}(GameboyJS || (GameboyJS = {})));

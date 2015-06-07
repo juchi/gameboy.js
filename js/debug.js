@@ -1,5 +1,8 @@
+var GameboyJS;
+(function (GameboyJS) {
+var Debug = {};
 // Output a range of 16 memory addresses
-function view_memory(addr, memory) {
+Debug.view_memory = function(addr, memory) {
     addr = addr & 0xFFF0;
     var pad = '00';
     var str = addr.toString(16) + ':';
@@ -16,7 +19,7 @@ function view_memory(addr, memory) {
     return str;
 }
 
-function view_tile(screen, index) {
+Debug.view_tile = function(screen, index) {
     var tileData = screen.readTileData(index, 0x8800);
 
     var pixelData = new Array(8 * 8)
@@ -36,3 +39,5 @@ function view_tile(screen, index) {
         console.log(i++ + ' ' + pixelData.splice(0, 8).join(''));
     }
 }
+GameboyJS.Debug = Debug;
+}(GameboyJS || (GameboyJS = {})));

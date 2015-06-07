@@ -1,3 +1,5 @@
+var GameboyJS;
+(function (GameboyJS) {
 function UnimplementedException(message, fatal) {
     this.message = message;
     this.name = UnimplementedException;
@@ -6,3 +8,5 @@ function UnimplementedException(message, fatal) {
     }
     this.fatal = fatal;
 }
+GameboyJS.UnimplementedException = UnimplementedException;
+}(GameboyJS || (GameboyJS = {})));

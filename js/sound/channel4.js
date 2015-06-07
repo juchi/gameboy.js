@@ -1,3 +1,6 @@
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
 var Channel4 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
@@ -38,3 +41,5 @@ Channel4.prototype.update = function(clockElapsed) {
 Channel4.prototype.setLength = function(value) {
     this.soundLength = 64 - (value & 0x3F);
 };
+GameboyJS.Channel4 = Channel4;
+}(GameboyJS || (GameboyJS = {})));

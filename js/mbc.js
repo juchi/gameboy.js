@@ -1,3 +1,5 @@
+var GameboyJS;
+(function (GameboyJS) {
 var MBC = {};
 
 MBC.getMbcInstance = function(memory, type) {
@@ -13,7 +15,7 @@ MBC.getMbcInstance = function(memory, type) {
             instance = new MBC3(memory);
             break;
         default:
-            throw new UnimplementedException('MBC type not supported');
+            throw new GameboyJS.UnimplementedException('MBC type not supported');
     }
 
     return instance;
@@ -24,7 +26,7 @@ var MBC1 = function(memory) {
     this.romBankNumber = 1;
     this.mode = 0; // mode 0 = ROM, mode 1 = RAM
     this.ramEnabled = true;
-    this.extRam = new ExtRam();
+    this.extRam = new GameboyJS.ExtRam();
 };
 
 MBC1.prototype.loadRam = function(game, size) {
@@ -71,7 +73,7 @@ var MBC3 = function(memory) {
     this.memory = memory;
     this.romBankNumber = 1;
     this.ramEnabled = true;
-    this.extRam = new ExtRam();
+    this.extRam = new GameboyJS.ExtRam();
 };
 
 MBC3.prototype.loadRam = function(game, size) {
@@ -96,7 +98,7 @@ MBC3.prototype.manageWrite = function(addr, value) {
             this.extRam.setRamBank(value);
             break;
         case 0x6000: case 0x7000: // Latch clock data
-            throw new UnimplementedException('cartridge clock not supported', false);
+            throw new GameboyJS.UnimplementedException('cartridge clock not supported', false);
             break;
         case 0xA000: case 0xB000:
             this.extRam.manageWrite(addr - 0xA000, value);
@@ -114,3 +116,6 @@ MBC0.prototype.manageWrite = function(addr, value) {
 };
 MBC0.prototype.readRam = function(addr) {return 0;};
 MBC0.prototype.loadRam = function() {};
+
+GameboyJS.MBC = MBC;
+}(GameboyJS || (GameboyJS = {})));

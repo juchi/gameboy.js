@@ -1,3 +1,5 @@
+var GameboyJS;
+(function (GameboyJS) {
 var Input = function(cpu) {
     this.cpu = cpu;
     this.memory = cpu.memory;
@@ -37,7 +39,7 @@ Input.prototype.update = function() {
     }
 
     if (this.memory.rb(this.P1) & value & 0x0F) {
-        this.cpu.requestInterrupt(CPU.INTERRUPTS.HILO);
+        this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
         console.log('hilo interrupt');
     }
 
@@ -89,4 +91,6 @@ Input.prototype.translateKeyboardKey = function(keycode) {
     }
 
     return key;
-}
+};
+GameboyJS.Input = Input;
+}(GameboyJS || (GameboyJS = {})));

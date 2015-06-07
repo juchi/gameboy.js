@@ -1,3 +1,5 @@
+var GameboyJS;
+(function (GameboyJS) {
 var Rom = function() {
     this.data = [];
 };
@@ -38,3 +40,6 @@ Rom.prototype.validate = function() {
     }
     return (hash & 0xFF) == this.data[0x14D];
 };
+
+GameboyJS.Rom = Rom;
+}(GameboyJS || (GameboyJS = {})));

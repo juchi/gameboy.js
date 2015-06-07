@@ -1,3 +1,5 @@
+var GameboyJS;
+(function (GameboyJS) {
 // List of CPU operations
 // Most operations have been factorized here to limit code redundancy
 //
@@ -176,7 +178,7 @@ var ops = {
     EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
     RETI:   function(p) {p.enableInterrupts();ops.RET(p);},
     CB:     function(p) {var opcode = p.memory.rb(p.r.pc++);
-        if (!cbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else cbmap[opcode](p);
+        if (!GameboyJS.opcodeCbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else GameboyJS.opcodeCbmap[opcode](p);
         p.clock.c+=4;},
     _testFlag: function(p, cc) {
         var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
@@ -185,3 +187,5 @@ var ops = {
     _makeword: function(b1, b2) {return (b1 << 8) + b2;},
     _getSignedValue: function(v) {return v & 0x80 ? v-256 : v;}
 };
+GameboyJS.cpuOps = ops;
+}(GameboyJS || (GameboyJS = {})));

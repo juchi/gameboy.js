@@ -1,18 +1,20 @@
+var GameboyJS;
+(function (GameboyJS) {
 // Gameboy class
 //
 // This object is the entry point of the application
 // Will delegate user actions to the emulated devices
 // and provide information where needed
 var Gameboy = function(canvas) {
-    var cpu = new CPU(this);
-    var screen = new Screen(canvas, cpu);
-    var input = new Input(cpu);
+    var cpu = new GameboyJS.CPU(this);
+    var screen = new GameboyJS.Screen(canvas, cpu);
+    var input = new GameboyJS.Input(cpu);
     cpu.input = input;
     this.input = input;
     this.cpu = cpu;
     this.screen = screen;
 
-    var rom = new Rom();
+    var rom = new GameboyJS.Rom();
     var that = this;
 
     this.statusContainer   = document.getElementById('status');
@@ -85,7 +87,7 @@ Gameboy.prototype.setSoundEnabled = function(value) {
 };
 
 Gameboy.prototype.handleException = function(e) {
-    if (e instanceof UnimplementedException) {
+    if (e instanceof GameboyJS.UnimplementedException) {
         if (e.fatal) {
             this.error('This cartridge is not supported ('+ e.message +')');
         } else {
@@ -94,4 +96,6 @@ Gameboy.prototype.handleException = function(e) {
     } else {
         throw e;
     }
-}
+};
+GameboyJS.Gameboy = Gameboy;
+}(GameboyJS || (GameboyJS = {})));

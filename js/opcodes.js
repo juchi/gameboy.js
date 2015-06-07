@@ -1,3 +1,6 @@
+var GameboyJS;
+(function (GameboyJS) {
+var ops = GameboyJS.cpuOps;
 // Each opcode (0 to 0xFF) is associated to a CPU operation
 // CPU operations are implemented separately
 // The cbmap object holds operations for CB prefixed opcodes (0xCB00 to 0xCBFF)
@@ -549,3 +552,6 @@ var cbmap = {
     0xFE: function(p){ops.SETirra(p, 7, 'H', 'L');},
     0xFF: function(p){ops.SETir(p, 7, 'A');}
 };
+GameboyJS.opcodeMap = map;
+GameboyJS.opcodeCbmap = cbmap;
+}(GameboyJS || (GameboyJS = {})));

@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // CPU class
 var CPU = function(gameboy) {
     this.gameboy = gameboy;

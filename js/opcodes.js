@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 var ops = GameboyJS.cpuOps;
 // Each opcode (0 to 0xFF) is associated to a CPU operation
 // CPU operations are implemented separately

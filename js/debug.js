@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 var Debug = {};
 // Output a range of 16 memory addresses
 Debug.view_memory = function(addr, memory) {

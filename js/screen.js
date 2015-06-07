@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // Screen device
 var Screen = function(canvas, cpu) {
     cpu.screen = this;
@@ -178,7 +180,7 @@ Screen.prototype.drawBackground = function(LCDC) {
     var bgy = this.deviceram(this.SCY);
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
+            var color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
             this.drawPixel(x, y, color);
         }
     }
@@ -206,7 +208,7 @@ Screen.prototype.drawSprites = function(LCDC) {
 
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            color = buffer[x + y * 160];
+            var color = buffer[x + y * 160];
             if (color === undefined || color === 0) continue;
             this.drawPixel(x, y, color);
         }
@@ -278,7 +280,7 @@ Screen.prototype.drawWindow = function(LCDC) {
     var wy = this.deviceram(this.WY);
     for (var x = Math.max(0, -wx); x < Math.min(Screen.physics.WIDTH, Screen.physics.WIDTH - wx); x++) {
         for (var y = Math.max(0, -wy); y < Math.min(Screen.physics.HEIGHT, Screen.physics.HEIGHT - wy); y++) {
-            color = buffer[(x & 255) + (y & 255) * 256];
+            var color = buffer[(x & 255) + (y & 255) * 256];
             this.drawPixel(x + wx, y + wy, color);
         }
     }

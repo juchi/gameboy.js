@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // Object for mapping the cartridge RAM
 var ExtRam = function() {
     this.extRam = null;

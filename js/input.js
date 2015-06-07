@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 var Input = function(cpu) {
     this.cpu = cpu;
     this.memory = cpu.memory;

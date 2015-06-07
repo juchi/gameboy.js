@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 var MBC = {};
 
 MBC.getMbcInstance = function(memory, type) {

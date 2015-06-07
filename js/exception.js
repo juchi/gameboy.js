@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 function UnimplementedException(message, fatal) {
     this.message = message;
     this.name = UnimplementedException;

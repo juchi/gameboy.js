@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // Gameboy class
 //
 // This object is the entry point of the application

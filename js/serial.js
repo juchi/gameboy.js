@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // Handler for the Serial port of the Gameboy
 //
 // It is designed for debug purposes as some tests output data on the serial port

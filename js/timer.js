@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 var Timer = function(cpu, memory) {
     this.cpu    = cpu;
     this.memory = memory;

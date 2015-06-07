@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // Memory unit
 var Memory = function(cpu) {
     this.addresses = {

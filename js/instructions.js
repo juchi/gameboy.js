@@ -1,5 +1,7 @@
 var GameboyJS;
 (function (GameboyJS) {
+"use strict";
+
 // List of CPU operations
 // Most operations have been factorized here to limit code redundancy
 //
@@ -67,7 +69,7 @@ var ops = {
         var f = 0; if(h)f|=0x20;if(c)f|=0x10;p.wr('F', f);
         p.wr('sp', (p.r.sp + v) & 0xFFFF);
         p.clock.c+=16;},
-    _ADDrrn:function(p, r1, r2, n) {var v1 = (p.r[r1]<<8) + p.r[r2];v2 = n;
+    _ADDrrn:function(p, r1, r2, n) {var v1 = (p.r[r1]<<8) + p.r[r2];var v2 = n;
         var res = v1 + v2;var c = res&0x10000;var h = ((v1&0xFFF) + (v2&0xFFF))&0x1000;var z = p.r.F&0x80;
         res&=0xFFFF;p.r[r2]=res&0xFF;res=res>>8;p.r[r1]=res&0xFF;
         var f=0;if(z)f|=0x80;if(h)f|=0x20;if(c)f|=0x10;p.r.F=f;},

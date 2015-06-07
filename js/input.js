@@ -37,7 +37,7 @@ Input.prototype.update = function() {
     }
 
     if (this.memory.rb(this.P1) & value & 0x0F) {
-        this.cpu.requestInterrupt(Processor.INTERRUPTS.HILO);
+        this.cpu.requestInterrupt(CPU.INTERRUPTS.HILO);
         console.log('hilo interrupt');
     }
 

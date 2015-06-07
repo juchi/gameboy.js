@@ -64,7 +64,7 @@ Screen.prototype.update = function(clockElapsed) {
                 if (this.line == 144) {
                     this.setMode(1);
                     vblank = true;
-                    this.cpu.requestInterrupt(Processor.INTERRUPTS.VBLANK);
+                    this.cpu.requestInterrupt(CPU.INTERRUPTS.VBLANK);
                     this.drawFrame();
                 } else {
                     this.setMode(2);
@@ -106,7 +106,7 @@ Screen.prototype.updateLY = function() {
     if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
         this.deviceram(this.STAT, STAT | (1 << 2));
         if (STAT & (1 << 6)) {
-            this.cpu.requestInterrupt(Processor.INTERRUPTS.LCDC);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.LCDC);
         }
     } else {
         this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
@@ -122,7 +122,7 @@ Screen.prototype.setMode = function(mode) {
 
     if (mode < 3) {
         if (newSTAT & (1 << (3+mode))) {
-            this.cpu.requestInterrupt(Processor.INTERRUPTS.LCDC);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.LCDC);
         }
     }
 };

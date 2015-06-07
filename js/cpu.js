@@ -1,5 +1,5 @@
 // CPU class
-var Processor = function(gameboy) {
+var CPU = function(gameboy) {
     this.gameboy = gameboy;
 
     this.interruptRoutines = {
@@ -20,7 +20,7 @@ var Processor = function(gameboy) {
     this.createDevices();
 };
 
-Processor.INTERRUPTS = {
+CPU.INTERRUPTS = {
     VBLANK: 0,
     LCDC:   1,
     TIMER:  2,
@@ -28,7 +28,7 @@ Processor.INTERRUPTS = {
     HILO:   4
 };
 
-Processor.prototype.createDevices = function() {
+CPU.prototype.createDevices = function() {
     this.memory = new Memory(this);
     this.timer = new Timer(this, this.memory);
     this.input = null;
@@ -39,17 +39,17 @@ Processor.prototype.createDevices = function() {
     this.serialHandler = ConsoleSerial;
 };
 
-Processor.prototype.reset = function() {
+CPU.prototype.reset = function() {
     this.memory.reset();
 
     this.r.sp = 0xFFFE;
 };
 
-Processor.prototype.loadRom = function(data) {
+CPU.prototype.loadRom = function(data) {
     this.memory.setRomData(data);
 };
 
-Processor.prototype.getRamSize = function() {
+CPU.prototype.getRamSize = function() {
     var size = 0;
     switch (this.memory.rb(0x149)) {
         case 1:
@@ -66,7 +66,7 @@ Processor.prototype.getRamSize = function() {
     return size;
 };
 
-Processor.prototype.getGameName = function() {
+CPU.prototype.getGameName = function() {
     var name = '';
     for (var i = 0x134; i < 0x143; i++) {
         var char = this.memory.rb(i) || 32;
@@ -77,7 +77,7 @@ Processor.prototype.getGameName = function() {
 };
 
 // Start the execution of the emulator
-Processor.prototype.run = function() {
+CPU.prototype.run = function() {
     if (this.usingBootRom) {
         this.r.pc = 0x0000;
     } else {
@@ -86,7 +86,7 @@ Processor.prototype.run = function() {
     this.frame();
 };
 
-Processor.prototype.stop = function() {
+CPU.prototype.stop = function() {
     clearTimeout(this.nextFrameTimer);
 };
 
@@ -97,7 +97,7 @@ Processor.prototype.stop = function() {
 // is considered the end of a frame
 //
 // The function is called on a regular basis with a timeout
-Processor.prototype.frame = function() {
+CPU.prototype.frame = function() {
     if (!this.isPaused) {
         this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / Screen.physics.FREQUENCY);
     }
@@ -135,7 +135,7 @@ Processor.prototype.frame = function() {
     }
 };
 
-Processor.prototype.fetchOpcode = function() {
+CPU.prototype.fetchOpcode = function() {
     var opcode = this.memory.rb(this.r.pc++);
     if (opcode === undefined) {console.log(opcode + ' at ' + (this.r.pc-1).toString(16));this.stop();return;}
     if (!map[opcode]) {
@@ -148,25 +148,25 @@ Processor.prototype.fetchOpcode = function() {
 };
 
 // read register
-Processor.prototype.rr = function(register) {
+CPU.prototype.rr = function(register) {
     return this.r[register];
 };
 
 // write register
-Processor.prototype.wr = function(register, value) {
+CPU.prototype.wr = function(register, value) {
     this.r[register] = value;
 };
 
-Processor.prototype.halt = function() {
+CPU.prototype.halt = function() {
     this.isHalted = true;
 };
-Processor.prototype.unhalt = function() {
+CPU.prototype.unhalt = function() {
     this.isHalted = false;
 };
-Processor.prototype.pause = function() {
+CPU.prototype.pause = function() {
     this.isPaused = true;
 };
-Processor.prototype.unpause = function() {
+CPU.prototype.unpause = function() {
     if (this.isPaused) {
         this.isPaused = false;
         this.frame();
@@ -174,7 +174,7 @@ Processor.prototype.unpause = function() {
 };
 
 // Look for interrupt flags
-Processor.prototype.checkInterrupt = function() {
+CPU.prototype.checkInterrupt = function() {
     if (!this.IME) {
         return;
     }
@@ -192,30 +192,30 @@ Processor.prototype.checkInterrupt = function() {
 };
 
 // Set an interrupt flag
-Processor.prototype.requestInterrupt = function(type) {
+CPU.prototype.requestInterrupt = function(type) {
     var IFval = this.memory.rb(0xFF0F);
     IFval |= (1 << type)
     this.memory.wb(0xFF0F, IFval) ;
     this.unhalt();
 };
 
-Processor.prototype.isInterruptEnable = function(type) {
+CPU.prototype.isInterruptEnable = function(type) {
     return Memory.readBit(this.memory.rb(0xFFFF), type) != 0;
 };
 
-Processor.prototype.enableInterrupts = function() {
+CPU.prototype.enableInterrupts = function() {
     this.IME = true;
 };
-Processor.prototype.disableInterrupts = function() {
+CPU.prototype.disableInterrupts = function() {
     this.IME = false;
 };
 
-Processor.prototype.enableSerialTransfer = function() {
+CPU.prototype.enableSerialTransfer = function() {
     this.enableSerial = 1;
     this.clock.serial = 0;
 };
 
-Processor.prototype.endSerialTransfer = function() {
+CPU.prototype.endSerialTransfer = function() {
     this.enableSerial = 0;
     var data = this.memory.rb(0xFF01);
     this.memory.wb(0xFF02, 0);
@@ -223,6 +223,6 @@ Processor.prototype.endSerialTransfer = function() {
     this.memory.wb(0xFF01, this.serialHandler.in());
 };
 
-Processor.prototype.resetDivTimer = function() {
+CPU.prototype.resetDivTimer = function() {
     this.timer.resetDiv();
 };

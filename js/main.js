@@ -4,7 +4,7 @@
 // Will delegate user actions to the emulated devices
 // and provide information where needed
 var Gameboy = function(canvas) {
-    var cpu = new Processor(this);
+    var cpu = new CPU(this);
     var screen = new Screen(canvas, cpu);
     var input = new Input(cpu);
     cpu.input = input;

@@ -37,7 +37,7 @@ Timer.prototype.updateTimer = function(clockElapsed) {
         this.memory.wb(this.TIMA, this.memory.rb(this.TIMA) + 1);
         if (this.memory.rb(this.TIMA) > 0xFF) {
             this.memory.wb(this.TIMA, this.memory.rb(this.TMA));
-            this.cpu.requestInterrupt(Processor.INTERRUPTS.TIMER);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.TIMER);
         }
     }
 };

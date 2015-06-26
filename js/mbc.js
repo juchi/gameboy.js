@@ -2,8 +2,11 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
+// Memory bank controllers
+
 var MBC = {};
 
+// Create an MBC instance depending on the type specified in the cartridge
 MBC.getMbcInstance = function(memory, type) {
     var instance;
     switch (type) {
@@ -111,6 +114,7 @@ MBC3.prototype.readRam = function(addr) {
     return this.extRam.manageRead(addr - 0xA000);
 };
 
+// MBC0 exists for consistency and manages the no-MBC cartriges
 var MBC0 = function(memory) {this.memory = memory;};
 
 MBC0.prototype.manageWrite = function(addr, value) {

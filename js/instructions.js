@@ -13,7 +13,8 @@ var GameboyJS;
 // Example : LDrrar = LOAD operation with two-registers memory address
 // as first parameter and one register value as second
 //
-// Underscore-prefixed functions are here to delegate the logic between similar operations
+// Underscore-prefixed functions are here to delegate the logic between similar operations,
+// they should not be called from outside
 //
 // Some helper functions are defined at the end of the object
 //
@@ -182,6 +183,9 @@ var ops = {
     CB:     function(p) {var opcode = p.memory.rb(p.r.pc++);
         if (!GameboyJS.opcodeCbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else GameboyJS.opcodeCbmap[opcode](p);
         p.clock.c+=4;},
+
+    // TODO the following should not be part of the ops objet
+    //      as they are just helpers for regular operations
     _testFlag: function(p, cc) {
         var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
         return (t && p.r.F&mask) || (!t && !(p.r.F&mask));},

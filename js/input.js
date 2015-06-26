@@ -2,6 +2,11 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
+// The Input management system
+//
+// Only manageKeyboardPress, manageKeyboardRelease, translateKeyboardKey
+// are tied to a keyboard usage,
+// other functions rely on the name of the original buttons
 var Input = function(cpu) {
     this.cpu = cpu;
     this.memory = cpu.memory;
@@ -63,6 +68,7 @@ Input.prototype.manageKeyboardRelease = function(keycode) {
     }
 };
 
+// Transform a keyboard keycode into a key of the Input.keys object
 Input.prototype.translateKeyboardKey = function(keycode) {
     var key = null;
     switch (keycode) {

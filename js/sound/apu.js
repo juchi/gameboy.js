@@ -1,6 +1,10 @@
 var GameboyJS;
 (function (GameboyJS) {
 "use strict";
+
+// Audio Processing unit
+// Listens the write accesses to the audio-reserved memory addresses
+// and dispatches the data to the sound channels
 var APU = function(memory) {
     this.memory = memory;
     this.enabled = false;
@@ -24,6 +28,8 @@ APU.prototype.disconnect = function() {
     this.channel2.disable();
     this.channel3.disable();
 };
+// Updates the states of each channel given the elapsed time
+// (in instructions) since last update
 APU.prototype.update = function(clockElapsed) {
     if (this.enabled == false) return;
 
@@ -49,6 +55,7 @@ APU.prototype.manageWrite = function(addr, value) {
     this.memory[addr] = value;
 
     switch (addr) {
+        // Channel 1 addresses
         case 0xFF10:
             this.channel1.clockSweep = 0;
             this.channel1.sweepTime = ((value & 0x70) >> 4);
@@ -81,7 +88,7 @@ APU.prototype.manageWrite = function(addr, value) {
             if (value & 0x80) this.channel1.play();
             break;
 
-
+        // Channel 2 addresses
         case 0xFF16:
             // todo : bits 6-7
             this.channel2.setLength(value & 0x3F);
@@ -109,6 +116,7 @@ APU.prototype.manageWrite = function(addr, value) {
             }
             break;
 
+        // Channel 3 addresses
         case 0xFF1A:
             // todo
             break;
@@ -135,12 +143,15 @@ APU.prototype.manageWrite = function(addr, value) {
             }
             break;
 
+        // Channel 4 addresses
         case 0xFF20:
             this.channel4.setLength(value & 0x3F);
             break;
         case 0xFF21:
+            // todo
             break;
         case 0xFF22:
+            // todo
             break;
         case 0xFF23:
             this.channel4.lengthCheck = (value & 0x40) ? true : false;
@@ -149,12 +160,14 @@ APU.prototype.manageWrite = function(addr, value) {
             }
             break;
 
+        // channel 3 wave bytes
         case 0xFF30:case 0xFF31:case 0xFF32:case 0xFF33:case 0xFF34:case 0xFF35:case 0xFF36:case 0xFF37:
         case 0xFF38:case 0xFF39:case 0xFF3A:case 0xFF3B:case 0xFF3C:case 0xFF3D:case 0xFF3E:case 0xFF3F:
             var index = addr - 0xFF30;
             this.channel3.setWaveBufferByte(index, value);
             break;
 
+        // general audio switch
         case 0xFF26:
             value &= 0xF0;
             this.memory[addr] = value;

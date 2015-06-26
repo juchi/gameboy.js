@@ -45,7 +45,9 @@ Timer.prototype.updateTimer = function(clockElapsed) {
         }
     }
 };
-
+// Update the DIV register internal clock
+// Increment it if the clock threshold is elapsed and
+// reset it if its value overflows
 Timer.prototype.updateDiv = function(clockElapsed) {
     var divThreshold = 256; // DIV is 16KHz
     this.divTime += clockElapsed;

@@ -4,6 +4,7 @@ var GameboyJS;
 
 // Memory unit
 var Memory = function(cpu) {
+    // TODO addresses should be global to the class and not inside an instance
     this.addresses = {
         VRAM_START : 0x8000,
         VRAM_END   : 0x9FFF,
@@ -57,6 +58,7 @@ Memory.prototype.loadRomBank = function(index) {
     }
 };
 
+// Video ram accessor
 Memory.prototype.vram = function(address) {
     if (address < this.addresses.VRAM_START || address > this.addresses.VRAM_END) {
         throw 'VRAM access in out of bounds address ' + address;
@@ -65,6 +67,7 @@ Memory.prototype.vram = function(address) {
     return this[address];
 };
 
+// OAM ram accessor
 Memory.prototype.oamram = function(address) {
     if (address < this.addresses.OAM_START || address > this.addresses.OAM_END) {
         throw 'OAMRAM access in out of bounds address ' + address;
@@ -73,6 +76,7 @@ Memory.prototype.oamram = function(address) {
     return this[address];
 };
 
+// Device ram accessor
 Memory.prototype.deviceram = function(address, value) {
     if (address < this.addresses.DEVICERAM_START || address > this.addresses.DEVICERAM_END) {
         throw 'Device RAM access in out of bounds address ' + address;
@@ -98,6 +102,7 @@ Memory.prototype.rb = function (addr) {
     return this[addr];
 };
 
+// Bitmasks for audio addresses reads
 var apuMask = [
 0x80,0x3F,0x00,0xFF,0xBF, // NR10-NR15
 0xFF,0x3F,0x00,0xFF,0xBF, // NR20-NR25
@@ -113,7 +118,7 @@ var apuMask = [
 // Used to centralize memory writes and delegate specific behaviour
 // to the correct units
 Memory.prototype.wb = function(addr, value) {
-    if (addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000)) {
+    if (addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000)) { // MBC
         this.mbc.manageWrite(addr, value);
     } else if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers
         this.cpu.apu.manageWrite(addr, value);

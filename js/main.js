@@ -10,9 +10,12 @@ var GameboyJS;
 var Gameboy = function(canvas) {
     var cpu = new GameboyJS.CPU(this);
     var screen = new GameboyJS.Screen(canvas, cpu);
+
     var input = new GameboyJS.Input(cpu);
     cpu.input = input;
     this.input = input;
+    this.pad = new GameboyJS.Keyboard(input);
+
     this.cpu = cpu;
     this.screen = screen;
 
@@ -25,12 +28,6 @@ var Gameboy = function(canvas) {
 
     document.getElementById('file').addEventListener('change', function(e){
         rom.loadFromFile(e.target.files[0], that.startRom.bind(that));
-    });
-    document.addEventListener('keydown', function(e) {
-        input.manageKeyboardPress(e.keyCode);
-    });
-    document.addEventListener('keyup', function(e) {
-        input.manageKeyboardRelease(e.keyCode);
     });
 };
 

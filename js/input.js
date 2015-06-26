@@ -4,9 +4,10 @@ var GameboyJS;
 
 // The Input management system
 //
-// Only manageKeyboardPress, manageKeyboardRelease, translateKeyboardKey
-// are tied to a keyboard usage,
-// other functions rely on the name of the original buttons
+// The pressKey() and releaseKey() functions should be called by a device class
+// like GameboyJS.Keyboard after a physical button trigger event
+//
+// They rely on the name of the original buttons as parameters (see Input.keys)
 var Input = function(cpu) {
     this.cpu = cpu;
     this.memory = cpu.memory;
@@ -52,53 +53,6 @@ Input.prototype.update = function() {
 
     value = (~value) & 0x3F;
     this.memory.wb(this.P1, value);
-};
-
-Input.prototype.manageKeyboardPress = function(keycode) {
-    var key = this.translateKeyboardKey(keycode);
-    if (key) {
-        this.pressKey(key);
-    }
-};
-
-Input.prototype.manageKeyboardRelease = function(keycode) {
-    var key = this.translateKeyboardKey(keycode);
-    if (key) {
-        this.releaseKey(key);
-    }
-};
-
-// Transform a keyboard keycode into a key of the Input.keys object
-Input.prototype.translateKeyboardKey = function(keycode) {
-    var key = null;
-    switch (keycode) {
-        case 71: // G
-            key = 'A';
-            break;
-        case 66: // B
-            key = 'B';
-            break;
-        case 72: // H
-            key = 'START';
-            break;
-        case 78: // N
-            key = 'SELECT';
-            break;
-        case 37: // left
-            key = 'LEFT';
-            break;
-        case 38: // up
-            key = 'UP';
-            break;
-        case 39: // right
-            key = 'RIGHT';
-            break;
-        case 40: // down
-            key = 'DOWN';
-            break;
-    }
-
-    return key;
 };
 GameboyJS.Input = Input;
 }(GameboyJS || (GameboyJS = {})));

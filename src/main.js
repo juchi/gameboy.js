@@ -16,7 +16,7 @@ var defaultOptions = {
 // and provide information where needed
 var Gameboy = function(canvas, options) {
     options = options || {};
-    this.options = GameboyJS.Util.extend(defaultOptions, options);
+    this.options = GameboyJS.Util.extend({}, defaultOptions, options);
 
     var cpu = new GameboyJS.CPU(this);
     var screen = new GameboyJS.Screen(canvas, cpu);

@@ -6,14 +6,6 @@ var GameboyJS;
 var CPU = function(gameboy) {
     this.gameboy = gameboy;
 
-    this.interruptRoutines = {
-        0: function(p){GameboyJS.cpuOps.RSTn(p, 0x40);},
-        1: function(p){GameboyJS.cpuOps.RSTn(p, 0x48);},
-        2: function(p){GameboyJS.cpuOps.RSTn(p, 0x50);},
-        3: function(p){GameboyJS.cpuOps.RSTn(p, 0x58);},
-        4: function(p){GameboyJS.cpuOps.RSTn(p, 0x60);}
-    };
-
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
     this.IME = true;
     this.clock = {c: 0, serial: 0};
@@ -30,6 +22,13 @@ CPU.INTERRUPTS = {
     TIMER:  2,
     SERIAL: 3,
     HILO:   4
+};
+CPU.interruptRoutines = {
+    0: function(p){GameboyJS.cpuOps.RSTn(p, 0x40);},
+    1: function(p){GameboyJS.cpuOps.RSTn(p, 0x48);},
+    2: function(p){GameboyJS.cpuOps.RSTn(p, 0x50);},
+    3: function(p){GameboyJS.cpuOps.RSTn(p, 0x58);},
+    4: function(p){GameboyJS.cpuOps.RSTn(p, 0x60);}
 };
 
 CPU.prototype.createDevices = function() {
@@ -189,7 +188,7 @@ CPU.prototype.checkInterrupt = function() {
             this.memory.wb(0xFF0F, IFval);
             this.disableInterrupts();
             this.clock.c += 4; // 20 clocks to serve interrupt, with 16 for RSTn
-            this.interruptRoutines[i](this);
+            CPU.interruptRoutines[i](this);
             break;
         }
     }

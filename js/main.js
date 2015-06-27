@@ -2,19 +2,29 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
+var defaultOptions = {
+    padClass: GameboyJS.Keyboard,
+    statusContainerId: 'status',
+    gameNameContainerId: 'game-name',
+    errorContainerId: 'error'
+};
+
 // Gameboy class
 //
 // This object is the entry point of the application
 // Will delegate user actions to the emulated devices
 // and provide information where needed
-var Gameboy = function(canvas) {
+var Gameboy = function(canvas, options) {
+    options = options || {};
+    this.options = defaultOptions;
+
     var cpu = new GameboyJS.CPU(this);
     var screen = new GameboyJS.Screen(canvas, cpu);
 
     var input = new GameboyJS.Input(cpu);
     cpu.input = input;
     this.input = input;
-    this.pad = new GameboyJS.Keyboard(input);
+    this.pad = new this.options.padClass(input);
 
     this.cpu = cpu;
     this.screen = screen;
@@ -22,9 +32,9 @@ var Gameboy = function(canvas) {
     var rom = new GameboyJS.Rom();
     var that = this;
 
-    this.statusContainer   = document.getElementById('status');
-    this.gameNameContainer = document.getElementById('game-name');
-    this.errorContainer    = document.getElementById('error');
+    this.statusContainer   = document.getElementById(this.options.statusContainerId) || document.createElement('div');
+    this.gameNameContainer = document.getElementById(this.options.gameNameContainerId) || document.createElement('div');
+    this.errorContainer    = document.getElementById(this.options.errorContainerId) || document.createElement('div');
 
     document.getElementById('file').addEventListener('change', function(e){
         rom.loadFromFile(e.target.files[0], that.startRom.bind(that));

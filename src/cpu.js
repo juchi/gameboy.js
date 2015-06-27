@@ -34,7 +34,6 @@ CPU.interruptRoutines = {
 CPU.prototype.createDevices = function() {
     this.memory = new GameboyJS.Memory(this);
     this.timer = new GameboyJS.Timer(this, this.memory);
-    this.input = null;
     this.apu = new GameboyJS.APU(this.memory);
 
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock

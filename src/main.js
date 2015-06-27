@@ -20,14 +20,15 @@ var Gameboy = function(canvas, options) {
 
     var cpu = new GameboyJS.CPU(this);
     var screen = new GameboyJS.Screen(canvas, cpu);
-
+    cpu.screen = screen;
     var input = new GameboyJS.Input(cpu);
     cpu.input = input;
-    this.input = input;
+
     this.pad = new this.options.padClass(input);
 
     this.cpu = cpu;
     this.screen = screen;
+    this.input = input;
 
     var romReader = new GameboyJS.RomFileReader();
     var rom = new GameboyJS.Rom(this, romReader);
@@ -74,7 +75,7 @@ Gameboy.prototype.setError = function(message) {
     this.errorContainer.classList.remove('hide');
     this.errorContainer.innerHTML = message;
 };
-// Display an error message
+// Display the name of the game running
 Gameboy.prototype.setGameName = function(name) {
     this.gameNameContainer.innerHTML = name;
 };

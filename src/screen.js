@@ -4,7 +4,6 @@ var GameboyJS;
 
 // Screen device
 var Screen = function(canvas, cpu) {
-    cpu.screen = this;
     this.cpu = cpu;
 
     this.colors = [

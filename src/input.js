@@ -8,11 +8,13 @@ var GameboyJS;
 // like GameboyJS.Keyboard after a physical button trigger event
 //
 // They rely on the name of the original buttons as parameters (see Input.keys)
-var Input = function(cpu) {
+var Input = function(cpu, pad) {
     this.cpu = cpu;
     this.memory = cpu.memory;
     this.P1 = 0xFF00;
     this.state = 0;
+
+    pad.init(this.pressKey.bind(this), this.releaseKey.bind(this));
 };
 
 Input.keys = {

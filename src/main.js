@@ -21,14 +21,15 @@ var Gameboy = function(canvas, options) {
     var cpu = new GameboyJS.CPU(this);
     var screen = new GameboyJS.Screen(canvas, cpu);
     cpu.screen = screen;
-    var input = new GameboyJS.Input(cpu);
-    cpu.input = input;
 
-    this.pad = new this.options.padClass(input);
+    var pad = new this.options.padClass();
+    var input = new GameboyJS.Input(cpu, pad);
+    cpu.input = input;
 
     this.cpu = cpu;
     this.screen = screen;
     this.input = input;
+    this.pad = pad;
 
     var romReader = new GameboyJS.RomFileReader();
     var rom = new GameboyJS.Rom(this, romReader);

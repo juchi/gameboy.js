@@ -2,29 +2,36 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-var Keyboard = function(input) {
-    this.input = input;
-    var self = this;
+// Keyboard listener
+// Does the mapping between the keyboard and the Input class
+var Keyboard = function() {};
 
+// Initialize the keyboard listeners and set up the callbacks
+// for button press / release
+Keyboard.prototype.init = function(onPress, onRelease) {
+    this.onPress = onPress;
+    this.onRelease = onRelease;
+
+    var self = this;
     document.addEventListener('keydown', function(e) {
         self.managePress(e.keyCode);
     });
     document.addEventListener('keyup', function(e) {
         self.manageRelease(e.keyCode);
     });
-};
+}
 
 Keyboard.prototype.managePress = function(keycode) {
     var key = this.translateKey(keycode);
     if (key) {
-        this.input.pressKey(key);
+        this.onPress(key);
     }
 };
 
 Keyboard.prototype.manageRelease = function(keycode) {
     var key = this.translateKey(keycode);
     if (key) {
-        this.input.releaseKey(key);
+        this.onRelease(key);
     }
 };
 

@@ -2,9 +2,10 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-// Handler for the Serial port of the Gameboy
-//
-// It is designed for debug purposes as some tests output data on the serial port
+// Handlers for the Serial port of the Gameboy
+
+// The ConsoleSerial is an output-only serial port
+// designed for debug purposes as some test roms output data on the serial port
 //
 // Will regularly output the received byte (converted to string) in the console logs
 // This handler always push the value 0xFF as an input
@@ -20,7 +21,7 @@ var ConsoleSerial = {
             ConsoleSerial.timeout = setTimeout(ConsoleSerial.print, 500);
         }
     },
-    in: function(){
+    in: function() {
         return 0xFF;
     },
     print: function() {
@@ -30,4 +31,13 @@ var ConsoleSerial = {
     }
 };
 GameboyJS.ConsoleSerial = ConsoleSerial;
+
+// A DummySerial outputs nothing and always inputs 0xFF
+var DummySerial = {
+    out: function() {},
+    in: function() {
+        return 0xFF;
+    }
+};
+GameboyJS.DummySerial = DummySerial;
 }(GameboyJS || (GameboyJS = {})));

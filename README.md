@@ -12,15 +12,56 @@ Tested on:
 * Chrome (sound issues)
 * Safari (sound issues)
 
-## How to run
+## Usage
 
-Once the project is cloned, it is only needed to open the `index.html` in a web browser, no additional dependencies are required.
-You can also directly go to the [demo site](http://juchi.github.io/gameboy.js/).
+### Run now
 
-Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but most tests fail.
+You can try the emulator directly on the [demo site](http://juchi.github.io/gameboy.js/).
+Alternatively, clone the project and run `index.html` in a web browser, no additional dependencies are required.
+
+Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but some tests fail.
 See the Tests section for more details.
 
-Currently, some games are runnable (tested with Tetris, Super Mario, Pokemon Red).
+Currently, some games are runnable (tested with Tetris, Super Mario, Pokemon Red) but will probably have glitches.
+
+### Run on a custom page
+
+You can directly use the distributed compiled file in a custom HTML page of your own,
+and create a new Gameboy object. It will expect a Canvas element and an optional options object.
+
+```javascript
+var canvas = document.getElementById('canvas');
+new GameboyJS.Gameboy(canvas);
+```
+
+### Options
+
+You can customize the configuration by passing a list of options to the Gameboy.
+
+```javascript
+var options, canvas;
+//...
+new GameboyJS.Gameboy(canvas, options);
+```
+
+* padClass: The JS class to use as a physical gamepad.
+  You can implement any kind of pad as long as this class implements the init() method.
+  See GameboyJS.Keyboard class for an example of implementation. Default is GameboyJS.Keyboard
+* statusContainerId: The ID of the HTML element for status display. Default is 'status'
+* gameNameContainerId: The ID of the HTML element for game name display. Default is 'game-name'
+* errorContainerId: The ID of the HTML element for error display. Default is 'error'
+
+### Build from source
+
+If you want to build the compiled JavaScript file from source
+to be sure you have the latest updates, just clone the repository
+and run the grunt tasks :
+
+```
+git clone https://github.com/juchi/gameboy.js
+npm install
+./node_modules/.bin/grunt
+```
 
 ## Features
 
@@ -48,7 +89,6 @@ The execution starts automatically at address 0x0100 which is the start address 
 All of the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
 
 The following features are in progress or partially working:
-* Timer (seems buggy as "memory timing" test fails)
 * sprites (no support for sprite flags)
 * MBC (only MBC 1 and MBC 3 are partially supported)
 * sound (ok on Firefox, poor on Chrome)

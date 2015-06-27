@@ -6,14 +6,6 @@ var GameboyJS;
 var CPU = function(gameboy) {
     this.gameboy = gameboy;
 
-    this.interruptRoutines = {
-        0: function(p){GameboyJS.cpuOps.RSTn(p, 0x40);},
-        1: function(p){GameboyJS.cpuOps.RSTn(p, 0x48);},
-        2: function(p){GameboyJS.cpuOps.RSTn(p, 0x50);},
-        3: function(p){GameboyJS.cpuOps.RSTn(p, 0x58);},
-        4: function(p){GameboyJS.cpuOps.RSTn(p, 0x60);}
-    };
-
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
     this.IME = true;
     this.clock = {c: 0, serial: 0};
@@ -31,11 +23,17 @@ CPU.INTERRUPTS = {
     SERIAL: 3,
     HILO:   4
 };
+CPU.interruptRoutines = {
+    0: function(p){GameboyJS.cpuOps.RSTn(p, 0x40);},
+    1: function(p){GameboyJS.cpuOps.RSTn(p, 0x48);},
+    2: function(p){GameboyJS.cpuOps.RSTn(p, 0x50);},
+    3: function(p){GameboyJS.cpuOps.RSTn(p, 0x58);},
+    4: function(p){GameboyJS.cpuOps.RSTn(p, 0x60);}
+};
 
 CPU.prototype.createDevices = function() {
     this.memory = new GameboyJS.Memory(this);
     this.timer = new GameboyJS.Timer(this, this.memory);
-    this.input = null;
     this.apu = new GameboyJS.APU(this.memory);
 
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
@@ -189,7 +187,7 @@ CPU.prototype.checkInterrupt = function() {
             this.memory.wb(0xFF0F, IFval);
             this.disableInterrupts();
             this.clock.c += 4; // 20 clocks to serve interrupt, with 16 for RSTn
-            this.interruptRoutines[i](this);
+            CPU.interruptRoutines[i](this);
             break;
         }
     }
@@ -357,11 +355,13 @@ var GameboyJS;
 // like GameboyJS.Keyboard after a physical button trigger event
 //
 // They rely on the name of the original buttons as parameters (see Input.keys)
-var Input = function(cpu) {
+var Input = function(cpu, pad) {
     this.cpu = cpu;
     this.memory = cpu.memory;
     this.P1 = 0xFF00;
     this.state = 0;
+
+    pad.init(this.pressKey.bind(this), this.releaseKey.bind(this));
 };
 
 Input.keys = {
@@ -608,29 +608,36 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-var Keyboard = function(input) {
-    this.input = input;
-    var self = this;
+// Keyboard listener
+// Does the mapping between the keyboard and the Input class
+var Keyboard = function() {};
 
+// Initialize the keyboard listeners and set up the callbacks
+// for button press / release
+Keyboard.prototype.init = function(onPress, onRelease) {
+    this.onPress = onPress;
+    this.onRelease = onRelease;
+
+    var self = this;
     document.addEventListener('keydown', function(e) {
         self.managePress(e.keyCode);
     });
     document.addEventListener('keyup', function(e) {
         self.manageRelease(e.keyCode);
     });
-};
+}
 
 Keyboard.prototype.managePress = function(keycode) {
     var key = this.translateKey(keycode);
     if (key) {
-        this.input.pressKey(key);
+        this.onPress(key);
     }
 };
 
 Keyboard.prototype.manageRelease = function(keycode) {
     var key = this.translateKey(keycode);
     if (key) {
-        this.input.releaseKey(key);
+        this.onRelease(key);
     }
 };
 
@@ -687,37 +694,30 @@ var defaultOptions = {
 // and provide information where needed
 var Gameboy = function(canvas, options) {
     options = options || {};
-    this.options = GameboyJS.Util.extend(defaultOptions, options);
+    this.options = GameboyJS.Util.extend({}, defaultOptions, options);
 
     var cpu = new GameboyJS.CPU(this);
     var screen = new GameboyJS.Screen(canvas, cpu);
+    cpu.screen = screen;
 
-    var input = new GameboyJS.Input(cpu);
+    var pad = new this.options.padClass();
+    var input = new GameboyJS.Input(cpu, pad);
     cpu.input = input;
-    this.input = input;
-    this.pad = new this.options.padClass(input);
 
     this.cpu = cpu;
     this.screen = screen;
+    this.input = input;
+    this.pad = pad;
 
-    var rom = new GameboyJS.Rom();
-    var that = this;
+    var romReader = new GameboyJS.RomFileReader();
+    var rom = new GameboyJS.Rom(this, romReader);
 
     this.statusContainer   = document.getElementById(this.options.statusContainerId) || document.createElement('div');
     this.gameNameContainer = document.getElementById(this.options.gameNameContainerId) || document.createElement('div');
     this.errorContainer    = document.getElementById(this.options.errorContainerId) || document.createElement('div');
-
-    document.getElementById('file').addEventListener('change', function(e){
-        rom.loadFromFile(e.target.files[0], that.startRom.bind(that));
-    });
 };
 
 Gameboy.prototype.startRom = function(rom) {
-    if (!rom.validate()) {
-        this.error('The file is not a valid GameBoy ROM.');
-        return;
-    }
-
     this.errorContainer.classList.add('hide');
     this.cpu.reset();
     try {
@@ -754,7 +754,7 @@ Gameboy.prototype.setError = function(message) {
     this.errorContainer.classList.remove('hide');
     this.errorContainer.innerHTML = message;
 };
-// Display an error message
+// Display the name of the game running
 Gameboy.prototype.setGameName = function(name) {
     this.gameNameContainer.innerHTML = name;
 };
@@ -1629,8 +1629,56 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-var Rom = function() {
-    this.data = [];
+// A FileReader is able to load a local file from an input element
+var RomFileReader = function() {
+    this.domElement = document.getElementById('file');
+};
+
+// Initialize the Reader
+// The callback argument willed be called when a file is successfully
+// read, with the data as argument (Uint8Array)
+RomFileReader.prototype.init = function(onLoadCallback) {
+    var self = this;
+    this.domElement.addEventListener('change', function(e){
+        self.loadFromFile(e.target.files[0], onLoadCallback);
+    });
+
+};
+
+RomFileReader.prototype.loadFromFile = function(file, cb) {
+    if (file === undefined) {
+        return;
+    }
+    var fr = new FileReader();
+    var self = this;
+    fr.onload = function() {
+        cb(new Uint8Array(fr.result));
+    };
+    fr.onerror = function(e) {
+        console.log('Error reading the file', e.target.error.code)
+    };
+    fr.readAsArrayBuffer(file);
+};
+
+GameboyJS.RomFileReader = RomFileReader;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+
+
+var Rom = function(gameboy, romReader) {
+    var data = [];
+    var self = this;
+    romReader.init(function(data) {
+        if (!validate(data)) {
+            gameboy.error('The file is not a valid GameBoy ROM.');
+            return;
+        }
+        self.data = data;
+        gameboy.startRom(self);
+    });
 };
 
 Rom.prototype.requestFile = function(filename, cb) {
@@ -1645,29 +1693,13 @@ Rom.prototype.requestFile = function(filename, cb) {
     xhr.send();
 };
 
-Rom.prototype.loadFromFile = function(file, cb) {
-    if (file === undefined) {
-        return;
-    }
-    var fr = new FileReader();
-    var that = this;
-    fr.onload = function() {
-        that.data = new Uint8Array(fr.result);
-        cb(that);
-    };
-    fr.onerror = function(e) {
-        console.log('Error reading the file', e.target.error.code)
-    };
-    fr.readAsArrayBuffer(file);
-};
-
 // Validate the checksum of the cartridge header
-Rom.prototype.validate = function() {
+function validate(data) {
     var hash = 0;
     for (var i = 0x134; i <= 0x14C; i++) {
-        hash = hash - this.data[i] - 1;
+        hash = hash - data[i] - 1;
     }
-    return (hash & 0xFF) == this.data[0x14D];
+    return (hash & 0xFF) == data[0x14D];
 };
 
 GameboyJS.Rom = Rom;
@@ -1679,7 +1711,6 @@ var GameboyJS;
 
 // Screen device
 var Screen = function(canvas, cpu) {
-    cpu.screen = this;
     this.cpu = cpu;
 
     this.colors = [
@@ -2568,9 +2599,15 @@ var GameboyJS;
 
 // Utility functions
 var Util = {};
-Util.extend = function(target, source) {
-    for (var name in source) {
-        target[name] = source[name];
+
+// Add to the first argument the properties of all other arguments
+Util.extend = function(target /*, source1, source2, etc. */) {
+    var sources = Array.prototype.slice.call(arguments);
+    for (var i in sources) {
+        var source = sources[i];
+        for (var name in source) {
+            target[name] = source[name];
+        }
     }
 
     return target;

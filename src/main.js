@@ -29,24 +29,15 @@ var Gameboy = function(canvas, options) {
     this.cpu = cpu;
     this.screen = screen;
 
-    var rom = new GameboyJS.Rom();
-    var that = this;
+    var romReader = new GameboyJS.RomFileReader();
+    var rom = new GameboyJS.Rom(this, romReader);
 
     this.statusContainer   = document.getElementById(this.options.statusContainerId) || document.createElement('div');
     this.gameNameContainer = document.getElementById(this.options.gameNameContainerId) || document.createElement('div');
     this.errorContainer    = document.getElementById(this.options.errorContainerId) || document.createElement('div');
-
-    document.getElementById('file').addEventListener('change', function(e){
-        rom.loadFromFile(e.target.files[0], that.startRom.bind(that));
-    });
 };
 
 Gameboy.prototype.startRom = function(rom) {
-    if (!rom.validate()) {
-        this.error('The file is not a valid GameBoy ROM.');
-        return;
-    }
-
     this.errorContainer.classList.add('hide');
     this.cpu.reset();
     try {

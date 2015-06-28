@@ -6,12 +6,6 @@ var GameboyJS;
 var Screen = function(canvas, cpu) {
     this.cpu = cpu;
 
-    this.colors = [
-        0xFF,
-        0xAA,
-        0x55,
-        0x00
-    ];
     this.LCDC= 0xFF40;
     this.STAT= 0xFF41;
     this.SCY = 0xFF42;
@@ -38,6 +32,13 @@ var Screen = function(canvas, cpu) {
     this.context = canvas.getContext('2d');
     this.imageData = this.context.createImageData(canvas.width, canvas.height);
 };
+
+Screen.colors = [
+    0xFF,
+    0xAA,
+    0x55,
+    0x00
+];
 
 Screen.physics = {
     WIDTH    : 160,
@@ -290,7 +291,7 @@ Screen.prototype.clearScreen = function() {
     this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
 };
 Screen.prototype.drawPixel = function(x, y, color) {
-    var v = this.colors[color];
+    var v = Screen.colors[color];
     this.imageData.data[(y * 160 + x) * 4] = v;
     this.imageData.data[(y * 160 + x) * 4 + 1] = v;
     this.imageData.data[(y * 160 + x) * 4 + 2] = v;

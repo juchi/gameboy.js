@@ -192,6 +192,7 @@ Screen.prototype.drawSprites = function(LCDC) {
     if (!GameboyJS.Memory.readBit(LCDC, 1)) {
         return;
     }
+    var spriteWidth = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
     var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
         var y = this.oamram(i);
@@ -204,8 +205,14 @@ Screen.prototype.drawSprites = function(LCDC) {
         }
         var xflip = GameboyJS.Memory.readBit(flags, 5);
         var yflip = GameboyJS.Memory.readBit(flags, 6);
+        var priority = GameboyJS.Memory.readBit(flags, 7);
         var tileData = this.readTileData(tileIndex, 0x8000);
-        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip);
+
+        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+        if (spriteWidth == 16) {
+            tileData = tileData.slice(16); // get the second tile of the sprite
+            this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+        }
     }
 
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
@@ -213,14 +220,15 @@ Screen.prototype.drawSprites = function(LCDC) {
             var color = buffer[x + y * 160] | 0;
             if (color === 0) continue;
             if (priority === 1 && this.getPixel(x, y) !== 0) continue;
-            this.drawPixel(x, y, color);
+            this.drawPixel(x, y, spritePalettes[paletteNumber][color]);
         }
     }
 };
 
-Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip) {
-    xflip = xflip || 0;
-    yflip = yflip || 0;
+Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
+    xflip = xflip | 0;
+    yflip = yflip | 0;
+    spriteMode = spriteMode | 0;
     var byteIndex = 0;
     for (var line = 0; line < 8; line++) {
         var l = yflip ? 7 - line : line;
@@ -230,6 +238,7 @@ Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip,
         for (var pixel = 0; pixel < 8; pixel++) {
             var mask = (1 << (7-pixel));
             var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+            if (spriteMode && colorValue == 0) continue;
             var p = xflip ? 7 - pixel : pixel;
             var bufferIndex = (x + p) + (y + l) * bufferWidth;
             buffer[bufferIndex] = colorValue;

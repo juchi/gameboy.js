@@ -30,6 +30,7 @@ var Screen = function(canvas, cpu) {
     canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
 
     this.context = canvas.getContext('2d');
+    this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     this.imageData = this.context.createImageData(canvas.width, canvas.height);
 };
 
@@ -139,6 +140,7 @@ Screen.prototype.drawFrame = function() {
         this.drawSprites(LCDC);
         this.drawWindow(LCDC);
     }
+    this.fillImageData();
     this.context.putImageData(this.imageData, 0, 0);
 };
 
@@ -208,8 +210,9 @@ Screen.prototype.drawSprites = function(LCDC) {
 
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            var color = buffer[x + y * 160];
-            if (color === undefined || color === 0) continue;
+            var color = buffer[x + y * 160] | 0;
+            if (color === 0) continue;
+            if (priority === 1 && this.getPixel(x, y) !== 0) continue;
             this.drawPixel(x, y, color);
         }
     }
@@ -290,12 +293,24 @@ Screen.prototype.clearScreen = function() {
     this.context.fillStyle = '#FFF';
     this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
 };
-Screen.prototype.drawPixel = function(x, y, color) {
-    var v = Screen.colors[color];
-    this.imageData.data[(y * 160 + x) * 4] = v;
-    this.imageData.data[(y * 160 + x) * 4 + 1] = v;
-    this.imageData.data[(y * 160 + x) * 4 + 2] = v;
-    this.imageData.data[(y * 160 + x) * 4 + 3] = 255;
+Screen.prototype.getPixel = function(x, y) {
+    return this.buffer[y * 160 + x];
 };
+Screen.prototype.drawPixel = function(x, y, color) {
+    this.buffer[y * 160 + x] = color;
+};
+Screen.prototype.fillImageData = function() {
+    for (var y = 0; y < Screen.physics.HEIGHT; y++) {
+        for (var x = 0; x < Screen.physics.WIDTH; x++) {
+            var offset = y * 160 + x;
+            var v = Screen.colors[this.buffer[offset]];
+            this.imageData.data[offset * 4] = v;
+            this.imageData.data[offset * 4 + 1] = v;
+            this.imageData.data[offset * 4 + 2] = v;
+            this.imageData.data[offset * 4 + 3] = 255;
+        }
+    }
+};
+
 GameboyJS.Screen = Screen;
 }(GameboyJS || (GameboyJS = {})));

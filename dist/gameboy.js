@@ -1713,18 +1713,15 @@ var GameboyJS;
 var Screen = function(canvas, cpu) {
     this.cpu = cpu;
 
-    this.colors = [
-        0xFF,
-        0xAA,
-        0x55,
-        0x00
-    ];
     this.LCDC= 0xFF40;
     this.STAT= 0xFF41;
     this.SCY = 0xFF42;
     this.SCX = 0xFF43;
     this.LY  = 0xFF44;
     this.LYC = 0xFF45;
+    this.BGP = 0xFF47;
+    this.OBP0= 0xFF48;
+    this.OBP1= 0xFF49;
     this.WY  = 0xFF4A;
     this.WX  = 0xFF4B;
 
@@ -1743,8 +1740,16 @@ var Screen = function(canvas, cpu) {
     canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
 
     this.context = canvas.getContext('2d');
+    this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     this.imageData = this.context.createImageData(canvas.width, canvas.height);
 };
+
+Screen.colors = [
+    0xFF,
+    0xAA,
+    0x55,
+    0x00
+];
 
 Screen.physics = {
     WIDTH    : 160,
@@ -1845,6 +1850,7 @@ Screen.prototype.drawFrame = function() {
         this.drawSprites(LCDC);
         this.drawWindow(LCDC);
     }
+    this.fillImageData();
     this.context.putImageData(this.imageData, 0, 0);
 };
 
@@ -1864,6 +1870,7 @@ Screen.prototype.drawBackground = function(LCDC) {
         signedIndex = true;
     }
 
+    var bgPalette = this.getPalette(this.deviceram(this.BGP));
     // cache object to store read tiles from this frame
     var cacheTile = {};
     // browse BG tilemap
@@ -1887,7 +1894,7 @@ Screen.prototype.drawBackground = function(LCDC) {
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
             var color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
-            this.drawPixel(x, y, color);
+            this.drawPixel(x, y, bgPalette[color]);
         }
     }
 };
@@ -1896,6 +1903,10 @@ Screen.prototype.drawSprites = function(LCDC) {
     if (!GameboyJS.Memory.readBit(LCDC, 1)) {
         return;
     }
+    var spriteWidth = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
+    var spritePalettes = {};
+    spritePalettes[0] = this.getPalette(this.deviceram(this.OBP0));
+    spritePalettes[1] = this.getPalette(this.deviceram(this.OBP1));
     var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
         var y = this.oamram(i);
@@ -1906,24 +1917,33 @@ Screen.prototype.drawSprites = function(LCDC) {
         if (y == 0 || y >= 160 || x == 0 || x >= 168) {
             continue;
         }
+        var paletteNumber = GameboyJS.Memory.readBit(flags, 4);
         var xflip = GameboyJS.Memory.readBit(flags, 5);
         var yflip = GameboyJS.Memory.readBit(flags, 6);
+        var priority = GameboyJS.Memory.readBit(flags, 7);
         var tileData = this.readTileData(tileIndex, 0x8000);
-        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip);
+
+        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+        if (spriteWidth == 16) {
+            tileData = tileData.slice(16); // get the second tile of the sprite
+            this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+        }
     }
 
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            var color = buffer[x + y * 160];
-            if (color === undefined || color === 0) continue;
-            this.drawPixel(x, y, color);
+            var color = buffer[x + y * 160] | 0;
+            if (color === 0) continue;
+            if (priority === 1 && this.getPixel(x, y) !== 0) continue;
+            this.drawPixel(x, y, spritePalettes[paletteNumber][color]);
         }
     }
 };
 
-Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip) {
-    xflip = xflip || 0;
-    yflip = yflip || 0;
+Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
+    xflip = xflip | 0;
+    yflip = yflip | 0;
+    spriteMode = spriteMode | 0;
     var byteIndex = 0;
     for (var line = 0; line < 8; line++) {
         var l = yflip ? 7 - line : line;
@@ -1933,6 +1953,7 @@ Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip,
         for (var pixel = 0; pixel < 8; pixel++) {
             var mask = (1 << (7-pixel));
             var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+            if (spriteMode && colorValue == 0) continue;
             var p = xflip ? 7 - pixel : pixel;
             var bufferIndex = (x + p) + (y + l) * bufferWidth;
             buffer[bufferIndex] = colorValue;
@@ -1992,17 +2013,41 @@ Screen.prototype.drawWindow = function(LCDC) {
     }
 };
 
+// Get the palette mapping from a given palette byte as stored in memory
+// A palette will map a tile color to a final palette color index
+// used with Screen.colors to get a shade of grey
+Screen.prototype.getPalette = function(paletteByte) {
+    var palette = [];
+    for (var i = 0; i < 8; i += 2) {
+        var shade = (paletteByte & (3 << i)) >> i;
+        palette.push(shade);
+    }
+    return palette;
+};
+
 Screen.prototype.clearScreen = function() {
     this.context.fillStyle = '#FFF';
     this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
 };
-Screen.prototype.drawPixel = function(x, y, color) {
-    var v = this.colors[color];
-    this.imageData.data[(y * 160 + x) * 4] = v;
-    this.imageData.data[(y * 160 + x) * 4 + 1] = v;
-    this.imageData.data[(y * 160 + x) * 4 + 2] = v;
-    this.imageData.data[(y * 160 + x) * 4 + 3] = 255;
+Screen.prototype.getPixel = function(x, y) {
+    return this.buffer[y * 160 + x];
 };
+Screen.prototype.drawPixel = function(x, y, color) {
+    this.buffer[y * 160 + x] = color;
+};
+Screen.prototype.fillImageData = function() {
+    for (var y = 0; y < Screen.physics.HEIGHT; y++) {
+        for (var x = 0; x < Screen.physics.WIDTH; x++) {
+            var offset = y * 160 + x;
+            var v = Screen.colors[this.buffer[offset]];
+            this.imageData.data[offset * 4] = v;
+            this.imageData.data[offset * 4 + 1] = v;
+            this.imageData.data[offset * 4 + 2] = v;
+            this.imageData.data[offset * 4 + 3] = 255;
+        }
+    }
+};
+
 GameboyJS.Screen = Screen;
 }(GameboyJS || (GameboyJS = {})));
 

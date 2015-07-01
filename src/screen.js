@@ -12,6 +12,9 @@ var Screen = function(canvas, cpu) {
     this.SCX = 0xFF43;
     this.LY  = 0xFF44;
     this.LYC = 0xFF45;
+    this.BGP = 0xFF47;
+    this.OBP0= 0xFF48;
+    this.OBP1= 0xFF49;
     this.WY  = 0xFF4A;
     this.WX  = 0xFF4B;
 
@@ -193,6 +196,9 @@ Screen.prototype.drawSprites = function(LCDC) {
         return;
     }
     var spriteWidth = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
+    var spritePalettes = {};
+    spritePalettes[0] = this.getPalette(this.deviceram(this.OBP0));
+    spritePalettes[1] = this.getPalette(this.deviceram(this.OBP1));
     var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
         var y = this.oamram(i);
@@ -203,6 +209,7 @@ Screen.prototype.drawSprites = function(LCDC) {
         if (y == 0 || y >= 160 || x == 0 || x >= 168) {
             continue;
         }
+        var paletteNumber = GameboyJS.Memory.readBit(flags, 4);
         var xflip = GameboyJS.Memory.readBit(flags, 5);
         var yflip = GameboyJS.Memory.readBit(flags, 6);
         var priority = GameboyJS.Memory.readBit(flags, 7);
@@ -296,6 +303,18 @@ Screen.prototype.drawWindow = function(LCDC) {
             this.drawPixel(x + wx, y + wy, color);
         }
     }
+};
+
+// Get the palette mapping from a given palette byte as stored in memory
+// A palette will map a tile color to a final palette color index
+// used with Screen.colors to get a shade of grey
+Screen.prototype.getPalette = function(paletteByte) {
+    var palette = [];
+    for (var i = 0; i < 8; i += 2) {
+        var shade = (paletteByte & (3 << i)) >> i;
+        palette.push(shade);
+    }
+    return palette;
 };
 
 Screen.prototype.clearScreen = function() {

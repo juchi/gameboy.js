@@ -163,6 +163,7 @@ Screen.prototype.drawBackground = function(LCDC) {
         signedIndex = true;
     }
 
+    var bgPalette = this.getPalette(this.deviceram(this.BGP));
     // cache object to store read tiles from this frame
     var cacheTile = {};
     // browse BG tilemap
@@ -186,7 +187,7 @@ Screen.prototype.drawBackground = function(LCDC) {
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
             var color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
-            this.drawPixel(x, y, color);
+            this.drawPixel(x, y, bgPalette[color]);
         }
     }
 };

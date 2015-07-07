@@ -4,7 +4,8 @@ var GameboyJS;
 
 var Debug = {};
 // Output a range of 16 memory addresses
-Debug.view_memory = function(addr, memory) {
+Debug.view_memory = function(addr, gameboy) {
+    var memory = gameboy.cpu.memory;
     addr = addr & 0xFFF0;
     var pad = '00';
     var str = addr.toString(16) + ':';
@@ -21,8 +22,18 @@ Debug.view_memory = function(addr, memory) {
     return str;
 };
 
-Debug.view_tile = function(screen, index, dataStart) {
-    dataStart = dataStart || 0x8800;
+Debug.view_tile = function(gameboy, index, dataStart) {
+    var memory = gameboy.cpu.memory;
+    var screen = gameboy.screen;
+    var LCDC = screen.deviceram(screen.LCDC);
+    if (typeof dataStart === 'undefined') {
+        dataStart = 0x8000;
+        if (!GameboyJS.Memory.readBit(LCDC, 4)) {
+            dataStart = 0x8800;
+            index = GameboyJS.cpuOps._getSignedValue(index) + 128;
+        }
+    }
+
     var tileData = screen.readTileData(index, dataStart);
 
     var pixelData = new Array(8 * 8)
@@ -43,15 +54,17 @@ Debug.view_tile = function(screen, index, dataStart) {
     }
 };
 
-Debug.list_visible_sprites = function(memory) {
+Debug.list_visible_sprites = function(gameboy) {
+    var memory = gameboy.cpu.memory;
     var indexes = new Array();
     for (var i = 0xFE00; i < 0xFE9F; i += 4) {
         var x = memory.oamram(i + 1);
+        var y = memory.oamram(i);
         var tileIndex = memory.oamram(i + 2);
         if (x == 0 || x >= 168) {
             continue;
         }
-        indexes.push(tileIndex);
+        indexes.push({oamIndex:i, x:x, y:y, tileIndex:tileIndex});
     }
 
     return indexes;

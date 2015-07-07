@@ -16,8 +16,6 @@ var GameboyJS;
 // Underscore-prefixed functions are here to delegate the logic between similar operations,
 // they should not be called from outside
 //
-// Some helper functions are defined at the end of the object
-//
 // It's up to each operation to update the CPU clock
 var ops = {
     LDrrnn: function(p, r1, r2) {p.wr(r2, p.memory.rb(p.r.pc));p.wr(r1, p.memory.rb(p.r.pc+1)); p.r.pc+=2;p.clock.c += 12;},
@@ -181,7 +179,7 @@ var ops = {
     EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
     RETI:   function(p) {p.enableInterrupts();ops.RET(p);},
     CB:     function(p) {var opcode = p.memory.rb(p.r.pc++);
-        if (!GameboyJS.opcodeCbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else GameboyJS.opcodeCbmap[opcode](p);
+        GameboyJS.opcodeCbmap[opcode](p);
         p.clock.c+=4;}
 };
 GameboyJS.cpuOps = ops;

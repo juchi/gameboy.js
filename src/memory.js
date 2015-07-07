@@ -4,21 +4,6 @@ var GameboyJS;
 
 // Memory unit
 var Memory = function(cpu) {
-    // TODO addresses should be global to the class and not inside an instance
-    this.addresses = {
-        VRAM_START : 0x8000,
-        VRAM_END   : 0x9FFF,
-
-        EXTRAM_START : 0xA000,
-        EXTRAM_END   : 0xBFFF,
-
-        OAM_START : 0xFE00,
-        OAM_END   : 0xFE9F,
-
-        DEVICE_START: 0xFF00,
-        DEVICE_END:   0xFF7F
-    };
-
     this.MEM_SIZE = 65536; // 64KB
 
     this.MBCtype = 0;
@@ -28,15 +13,29 @@ var Memory = function(cpu) {
     this.cpu = cpu;
 };
 
+Memory.addresses = {
+    VRAM_START : 0x8000,
+    VRAM_END   : 0x9FFF,
+
+    EXTRAM_START : 0xA000,
+    EXTRAM_END   : 0xBFFF,
+
+    OAM_START : 0xFE00,
+    OAM_END   : 0xFE9F,
+
+    DEVICE_START: 0xFF00,
+    DEVICE_END:   0xFF7F
+};
+
 // Memory can be accessed as an Array
 Memory.prototype = new Array();
 
 Memory.prototype.reset = function() {
     this.length = this.MEM_SIZE;
-    for (var i = this.addresses.VRAM_START; i <= this.addresses.VRAM_END; i++) {
+    for (var i = Memory.addresses.VRAM_START; i <= Memory.addresses.VRAM_END; i++) {
         this[i] = 0;
     }
-    for (var i = this.addresses.DEVICE_START; i <= this.addresses.DEVICE_END; i++) {
+    for (var i = Memory.addresses.DEVICE_START; i <= Memory.addresses.DEVICE_END; i++) {
         this[i] = 0;
     }
     this[0xFFFF] = 0;
@@ -60,7 +59,7 @@ Memory.prototype.loadRomBank = function(index) {
 
 // Video ram accessor
 Memory.prototype.vram = function(address) {
-    if (address < this.addresses.VRAM_START || address > this.addresses.VRAM_END) {
+    if (address < Memory.addresses.VRAM_START || address > Memory.addresses.VRAM_END) {
         throw 'VRAM access in out of bounds address ' + address;
     }
 
@@ -69,7 +68,7 @@ Memory.prototype.vram = function(address) {
 
 // OAM ram accessor
 Memory.prototype.oamram = function(address) {
-    if (address < this.addresses.OAM_START || address > this.addresses.OAM_END) {
+    if (address < Memory.addresses.OAM_START || address > Memory.addresses.OAM_END) {
         throw 'OAMRAM access in out of bounds address ' + address;
     }
 
@@ -78,7 +77,7 @@ Memory.prototype.oamram = function(address) {
 
 // Device ram accessor
 Memory.prototype.deviceram = function(address, value) {
-    if (address < this.addresses.DEVICERAM_START || address > this.addresses.DEVICERAM_END) {
+    if (address < Memory.addresses.DEVICERAM_START || address > Memory.addresses.DEVICERAM_END) {
         throw 'Device RAM access in out of bounds address ' + address;
     }
     if (typeof value === "undefined") {
@@ -146,7 +145,7 @@ Memory.prototype.wb = function(addr, value) {
 Memory.prototype.dmaTransfer = function(startAddressPrefix) {
     var startAddress = (startAddressPrefix << 8);
     for (var i = 0; i < 0xA0; i++) {
-        this[this.addresses.OAM_START + i] = this[startAddress + i];
+        this[Memory.addresses.OAM_START + i] = this[startAddress + i];
     }
 };
 

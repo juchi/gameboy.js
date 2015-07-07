@@ -196,7 +196,7 @@ Screen.prototype.drawSprites = function(LCDC) {
     if (!GameboyJS.Memory.readBit(LCDC, 1)) {
         return;
     }
-    var spriteWidth = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
+    var spriteHeight = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
     var spritePalettes = {};
     spritePalettes[0] = this.getPalette(this.deviceram(this.OBP0));
     spritePalettes[1] = this.getPalette(this.deviceram(this.OBP1));
@@ -214,12 +214,12 @@ Screen.prototype.drawSprites = function(LCDC) {
         var xflip = GameboyJS.Memory.readBit(flags, 5);
         var yflip = GameboyJS.Memory.readBit(flags, 6);
         var priority = GameboyJS.Memory.readBit(flags, 7);
-        var tileData = this.readTileData(tileIndex, 0x8000);
+        var tileData = this.readTileData(tileIndex, 0x8000, spriteHeight * 2);
 
         this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
-        if (spriteWidth == 16) {
+        if (spriteHeight == 16) {
             tileData = tileData.slice(16); // get the second tile of the sprite
-            this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+            this.drawTile(tileData, x - 8, y - 8, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
         }
     }
 
@@ -254,11 +254,11 @@ Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip,
     }
 };
 
-Screen.prototype.readTileData = function(tileIndex, dataStart) {
-    var tileSize  = 0x10; // 16 bytes / tile
+Screen.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
+    tileSize = tileSize || 0x10; // 16 bytes / tile by default (8*8 px)
     var tileData = new Array();
 
-    var tileAddressStart = dataStart + (tileIndex * tileSize);
+    var tileAddressStart = dataStart + (tileIndex * 0x10);
     for (var i = tileAddressStart; i < tileAddressStart + tileSize; i++) {
         tileData.push(this.vram(i));
     }

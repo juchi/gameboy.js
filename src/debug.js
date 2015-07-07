@@ -19,10 +19,11 @@ Debug.view_memory = function(addr, memory) {
     }
 
     return str;
-}
+};
 
-Debug.view_tile = function(screen, index) {
-    var tileData = screen.readTileData(index, 0x8800);
+Debug.view_tile = function(screen, index, dataStart) {
+    dataStart = dataStart || 0x8800;
+    var tileData = screen.readTileData(index, dataStart);
 
     var pixelData = new Array(8 * 8)
     for (var line = 0; line < 8; line++) {
@@ -40,6 +41,20 @@ Debug.view_tile = function(screen, index) {
     while (pixelData.length) {
         console.log(i++ + ' ' + pixelData.splice(0, 8).join(''));
     }
-}
+};
+
+Debug.list_visible_sprites = function(memory) {
+    var indexes = new Array();
+    for (var i = 0xFE00; i < 0xFE9F; i += 4) {
+        var x = memory.oamram(i + 1);
+        var tileIndex = memory.oamram(i + 2);
+        if (x == 0 || x >= 168) {
+            continue;
+        }
+        indexes.push(tileIndex);
+    }
+
+    return indexes;
+};
 GameboyJS.Debug = Debug;
 }(GameboyJS || (GameboyJS = {})));

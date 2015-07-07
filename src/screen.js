@@ -171,7 +171,7 @@ Screen.prototype.drawBackground = function(LCDC) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
-            tileIndex = GameboyJS.cpuOps._getSignedValue(tileIndex) + 128;
+            tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
         }
 
         // try to retrieve the tile data from the cache, or use readTileData() to read from ram
@@ -287,7 +287,7 @@ Screen.prototype.drawWindow = function(LCDC) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
-            tileIndex = GameboyJS.cpuOps._getSignedValue(tileIndex) + 128;
+            tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
         }
 
         var tileData = this.readTileData(tileIndex, dataStart);

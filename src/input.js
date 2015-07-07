@@ -30,6 +30,8 @@ Input.keys = {
 
 Input.prototype.pressKey = function(key) {
     this.state |= Input.keys[key];
+
+    this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
 };
 
 Input.prototype.releaseKey = function(key) {
@@ -39,22 +41,17 @@ Input.prototype.releaseKey = function(key) {
 
 Input.prototype.update = function() {
     var value = this.memory.rb(this.P1);
-    value = (~value) & 0x30;
+    value = ((~value) & 0x30); // invert the value so 1 means 'active'
     if (value & 0x10) { // direction keys listened
-        value |= this.state & 0x0F;
+        value |= (this.state & 0x0F);
     } else if (value & 0x20) { // action keys listened
         value |= ((this.state & 0xF0) >> 4);
     } else if ((value & 0x30) == 0) { // no keys listened
         value &= 0xF0;
     }
 
-    if (this.memory.rb(this.P1) & value & 0x0F) {
-        this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
-        console.log('hilo interrupt');
-    }
-
-    value = (~value) & 0x3F;
-    this.memory.wb(this.P1, value);
+    value = ((~value) & 0x3F); // invert back
+    this.memory[this.P1] = value;
 };
 GameboyJS.Input = Input;
 }(GameboyJS || (GameboyJS = {})));

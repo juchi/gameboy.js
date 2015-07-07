@@ -122,6 +122,8 @@ Memory.prototype.wb = function(addr, value) {
         this.mbc.manageWrite(addr, value);
     } else if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers
         this.cpu.apu.manageWrite(addr, value);
+    } else if (addr == 0xFF00) { // input register
+        this[addr] = ((this[addr] & 0x0F) | (value & 0x30));
     } else {
         this[addr] = value;
         if ((addr & 0xFF00) == 0xFF00) {

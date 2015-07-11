@@ -125,7 +125,7 @@ CPU.prototype.frame = function() {
             }
 
             var elapsed = this.clock.c - oldInstrCount;
-            vblank = this.screen.update(elapsed);
+            vblank = this.gpu.update(elapsed);
             this.timer.update(elapsed);
             this.input.update();
             this.apu.update(elapsed);

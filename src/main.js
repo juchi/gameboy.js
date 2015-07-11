@@ -19,8 +19,9 @@ var Gameboy = function(canvas, options) {
     this.options = GameboyJS.Util.extend({}, defaultOptions, options);
 
     var cpu = new GameboyJS.CPU(this);
-    var screen = new GameboyJS.Screen(canvas, cpu);
-    cpu.screen = screen;
+    var screen = new GameboyJS.Screen(canvas);
+    var gpu = new GameboyJS.GPU(screen, cpu);
+    cpu.gpu = gpu;
 
     var pad = new this.options.padClass();
     var input = new GameboyJS.Input(cpu, pad);

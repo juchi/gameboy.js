@@ -1,10 +1,10 @@
 var GameboyJS;
 (function (GameboyJS) {
 "use strict";
-
-// Screen device
-var Screen = function(canvas, cpu) {
+var Screen;
+var GPU = function(screen, cpu) {
     this.cpu = cpu;
+    this.screen = screen;
 
     this.LCDC= 0xFF40;
     this.STAT= 0xFF41;
@@ -29,29 +29,11 @@ var Screen = function(canvas, cpu) {
     this.mode = 2;
     this.line = 0;
 
-    canvas.width = Screen.physics.WIDTH * Screen.physics.PIXELSIZE;
-    canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
-
-    this.context = canvas.getContext('2d');
+    Screen = GameboyJS.Screen;
     this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
-    this.imageData = this.context.createImageData(canvas.width, canvas.height);
 };
 
-Screen.colors = [
-    0xFF,
-    0xAA,
-    0x55,
-    0x00
-];
-
-Screen.physics = {
-    WIDTH    : 160,
-    HEIGHT   : 144,
-    PIXELSIZE: 1,
-    FREQUENCY: 60
-};
-
-Screen.tilemap = {
+GPU.tilemap = {
     HEIGHT: 32,
     WIDTH: 32,
     START_0: 0x9800,
@@ -59,7 +41,7 @@ Screen.tilemap = {
     LENGTH: 0x0400 // 1024 bytes = 32*32
 };
 
-Screen.prototype.update = function(clockElapsed) {
+GPU.prototype.update = function(clockElapsed) {
     this.clock += clockElapsed;
     var vblank = false;
 
@@ -108,7 +90,7 @@ Screen.prototype.update = function(clockElapsed) {
     return vblank;
 };
 
-Screen.prototype.updateLY = function() {
+GPU.prototype.updateLY = function() {
     this.deviceram(this.LY, this.line);
     var STAT = this.deviceram(this.STAT);
     if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
@@ -121,7 +103,7 @@ Screen.prototype.updateLY = function() {
     }
 };
 
-Screen.prototype.setMode = function(mode) {
+GPU.prototype.setMode = function(mode) {
     this.mode = mode;
     var newSTAT = this.deviceram(this.STAT);
     newSTAT &= 0xFC;
@@ -135,7 +117,7 @@ Screen.prototype.setMode = function(mode) {
     }
 };
 
-Screen.prototype.drawFrame = function() {
+GPU.prototype.drawFrame = function() {
     var LCDC = this.deviceram(this.LCDC);
     var enable = GameboyJS.Memory.readBit(LCDC, 7);
     if (enable) {
@@ -143,17 +125,16 @@ Screen.prototype.drawFrame = function() {
         this.drawSprites(LCDC);
         this.drawWindow(LCDC);
     }
-    this.fillImageData();
-    this.context.putImageData(this.imageData, 0, 0);
+    this.screen.render(this.buffer);
 };
 
-Screen.prototype.drawBackground = function(LCDC) {
+GPU.prototype.drawBackground = function(LCDC) {
     if (!GameboyJS.Memory.readBit(LCDC, 0)) {
         return;
     }
 
     var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Memory.readBit(LCDC, 3) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
+    var mapStart = GameboyJS.Memory.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
     if (GameboyJS.Memory.readBit(LCDC, 4)) {
@@ -163,11 +144,11 @@ Screen.prototype.drawBackground = function(LCDC) {
         signedIndex = true;
     }
 
-    var bgPalette = this.getPalette(this.deviceram(this.BGP));
+    var bgPalette = GPU.getPalette(this.deviceram(this.BGP));
     // cache object to store read tiles from this frame
     var cacheTile = {};
     // browse BG tilemap
-    for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
+    for (var i = 0; i < GPU.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
@@ -177,8 +158,8 @@ Screen.prototype.drawBackground = function(LCDC) {
         // try to retrieve the tile data from the cache, or use readTileData() to read from ram
         var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
 
-        var x = i % Screen.tilemap.WIDTH;
-        var y = (i / Screen.tilemap.WIDTH) | 0;
+        var x = i % GPU.tilemap.WIDTH;
+        var y = (i / GPU.tilemap.WIDTH) | 0;
         this.drawTile(tileData, x * 8, y * 8, buffer, 256);
     }
 
@@ -192,14 +173,14 @@ Screen.prototype.drawBackground = function(LCDC) {
     }
 };
 
-Screen.prototype.drawSprites = function(LCDC) {
+GPU.prototype.drawSprites = function(LCDC) {
     if (!GameboyJS.Memory.readBit(LCDC, 1)) {
         return;
     }
     var spriteHeight = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
     var spritePalettes = {};
-    spritePalettes[0] = this.getPalette(this.deviceram(this.OBP0));
-    spritePalettes[1] = this.getPalette(this.deviceram(this.OBP1));
+    spritePalettes[0] = GPU.getPalette(this.deviceram(this.OBP0));
+    spritePalettes[1] = GPU.getPalette(this.deviceram(this.OBP1));
     var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
         var y = this.oamram(i);
@@ -233,7 +214,7 @@ Screen.prototype.drawSprites = function(LCDC) {
     }
 };
 
-Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
+GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
     xflip = xflip | 0;
     yflip = yflip | 0;
     spriteMode = spriteMode | 0;
@@ -254,7 +235,7 @@ Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip,
     }
 };
 
-Screen.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
+GPU.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
     tileSize = tileSize || 0x10; // 16 bytes / tile by default (8*8 px)
     var tileData = new Array();
 
@@ -266,13 +247,13 @@ Screen.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
     return tileData;
 };
 
-Screen.prototype.drawWindow = function(LCDC) {
+GPU.prototype.drawWindow = function(LCDC) {
     if (!GameboyJS.Memory.readBit(LCDC, 5)) {
         return;
     }
 
     var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Memory.readBit(LCDC, 6) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
+    var mapStart = GameboyJS.Memory.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
     if (GameboyJS.Memory.readBit(LCDC, 4)) {
@@ -283,7 +264,7 @@ Screen.prototype.drawWindow = function(LCDC) {
     }
 
     // browse Window tilemap
-    for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
+    for (var i = 0; i < GPU.tilemap.LENGTH; i++) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
@@ -291,8 +272,8 @@ Screen.prototype.drawWindow = function(LCDC) {
         }
 
         var tileData = this.readTileData(tileIndex, dataStart);
-        var x = i % Screen.tilemap.WIDTH;
-        var y = (i / Screen.tilemap.WIDTH) | 0;
+        var x = i % GPU.tilemap.WIDTH;
+        var y = (i / GPU.tilemap.WIDTH) | 0;
         this.drawTile(tileData, x * 8, y * 8, buffer, 256);
     }
 
@@ -306,10 +287,18 @@ Screen.prototype.drawWindow = function(LCDC) {
     }
 };
 
+GPU.prototype.drawPixel = function(x, y, color) {
+    this.buffer[y * 160 + x] = color;
+};
+
+GPU.prototype.getPixel = function(x, y) {
+    return this.buffer[y * 160 + x];
+};
+
 // Get the palette mapping from a given palette byte as stored in memory
 // A palette will map a tile color to a final palette color index
 // used with Screen.colors to get a shade of grey
-Screen.prototype.getPalette = function(paletteByte) {
+GPU.getPalette = function(paletteByte) {
     var palette = [];
     for (var i = 0; i < 8; i += 2) {
         var shade = (paletteByte & (3 << i)) >> i;
@@ -318,28 +307,5 @@ Screen.prototype.getPalette = function(paletteByte) {
     return palette;
 };
 
-Screen.prototype.clearScreen = function() {
-    this.context.fillStyle = '#FFF';
-    this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
-};
-Screen.prototype.getPixel = function(x, y) {
-    return this.buffer[y * 160 + x];
-};
-Screen.prototype.drawPixel = function(x, y, color) {
-    this.buffer[y * 160 + x] = color;
-};
-Screen.prototype.fillImageData = function() {
-    for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-        for (var x = 0; x < Screen.physics.WIDTH; x++) {
-            var offset = y * 160 + x;
-            var v = Screen.colors[this.buffer[offset]];
-            this.imageData.data[offset * 4] = v;
-            this.imageData.data[offset * 4 + 1] = v;
-            this.imageData.data[offset * 4 + 2] = v;
-            this.imageData.data[offset * 4 + 3] = 255;
-        }
-    }
-};
-
-GameboyJS.Screen = Screen;
+GameboyJS.GPU = GPU;
 }(GameboyJS || (GameboyJS = {})));

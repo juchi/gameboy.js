@@ -182,7 +182,7 @@ CPU.prototype.checkInterrupt = function() {
     }
     for (var i = 0; i < 5; i++) {
         var IFval = this.memory.rb(0xFF0F);
-        if (GameboyJS.Memory.readBit(IFval, i) && this.isInterruptEnable(i)) {
+        if (GameboyJS.Util.readBit(IFval, i) && this.isInterruptEnable(i)) {
             IFval &= (0xFF - (1<<i));
             this.memory.wb(0xFF0F, IFval);
             this.disableInterrupts();
@@ -202,7 +202,7 @@ CPU.prototype.requestInterrupt = function(type) {
 };
 
 CPU.prototype.isInterruptEnable = function(type) {
-    return GameboyJS.Memory.readBit(this.memory.rb(0xFFFF), type) != 0;
+    return GameboyJS.Util.readBit(this.memory.rb(0xFFFF), type) != 0;
 };
 
 CPU.prototype.enableInterrupts = function() {

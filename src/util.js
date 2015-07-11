@@ -24,8 +24,17 @@ var Util = {
         return (test && p.r.F&mask) || (!test && !(p.r.F&mask));
     },
     getRegAddr: function(p, r1, r2) {return Util.makeword(p.r[r1], p.r[r2]);},
+
+    // make a 16 bits word from 2 bytes
     makeword: function(b1, b2) {return (b1 << 8) + b2;},
-    getSignedValue: function(v) {return v & 0x80 ? v-256 : v;}
+
+    // return the integer signed value of a given byte
+    getSignedValue: function(v) {return v & 0x80 ? v-256 : v;},
+
+    // extract a bit from a byte
+    readBit: function(byte, index) {
+        return (byte >> index) & 1;
+    }
 };
 
 GameboyJS.Util = Util;

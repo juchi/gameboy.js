@@ -149,9 +149,5 @@ Memory.prototype.dmaTransfer = function(startAddressPrefix) {
     }
 };
 
-// Helper to extract a bit from a byte
-Memory.readBit = function(byte, index) {
-    return (byte >> index) & 1;
-};
 GameboyJS.Memory = Memory;
 }(GameboyJS || (GameboyJS = {})));

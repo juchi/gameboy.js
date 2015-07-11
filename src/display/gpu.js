@@ -119,7 +119,7 @@ GPU.prototype.setMode = function(mode) {
 
 GPU.prototype.drawFrame = function() {
     var LCDC = this.deviceram(this.LCDC);
-    var enable = GameboyJS.Memory.readBit(LCDC, 7);
+    var enable = GameboyJS.Util.readBit(LCDC, 7);
     if (enable) {
         this.drawBackground(LCDC);
         this.drawSprites(LCDC);
@@ -129,15 +129,15 @@ GPU.prototype.drawFrame = function() {
 };
 
 GPU.prototype.drawBackground = function(LCDC) {
-    if (!GameboyJS.Memory.readBit(LCDC, 0)) {
+    if (!GameboyJS.Util.readBit(LCDC, 0)) {
         return;
     }
 
     var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Memory.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+    var mapStart = GameboyJS.Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
-    if (GameboyJS.Memory.readBit(LCDC, 4)) {
+    if (GameboyJS.Util.readBit(LCDC, 4)) {
         dataStart = 0x8000;
     } else {
         dataStart = 0x8800;
@@ -174,10 +174,10 @@ GPU.prototype.drawBackground = function(LCDC) {
 };
 
 GPU.prototype.drawSprites = function(LCDC) {
-    if (!GameboyJS.Memory.readBit(LCDC, 1)) {
+    if (!GameboyJS.Util.readBit(LCDC, 1)) {
         return;
     }
-    var spriteHeight = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
+    var spriteHeight = GameboyJS.Util.readBit(LCDC, 2) ? 16 : 8;
     var spritePalettes = {};
     spritePalettes[0] = GPU.getPalette(this.deviceram(this.OBP0));
     spritePalettes[1] = GPU.getPalette(this.deviceram(this.OBP1));
@@ -191,10 +191,10 @@ GPU.prototype.drawSprites = function(LCDC) {
         if (y == 0 || y >= 160 || x == 0 || x >= 168) {
             continue;
         }
-        var paletteNumber = GameboyJS.Memory.readBit(flags, 4);
-        var xflip = GameboyJS.Memory.readBit(flags, 5);
-        var yflip = GameboyJS.Memory.readBit(flags, 6);
-        var priority = GameboyJS.Memory.readBit(flags, 7);
+        var paletteNumber = GameboyJS.Util.readBit(flags, 4);
+        var xflip = GameboyJS.Util.readBit(flags, 5);
+        var yflip = GameboyJS.Util.readBit(flags, 6);
+        var priority = GameboyJS.Util.readBit(flags, 7);
         var tileData = this.readTileData(tileIndex, 0x8000, spriteHeight * 2);
 
         this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
@@ -248,15 +248,15 @@ GPU.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
 };
 
 GPU.prototype.drawWindow = function(LCDC) {
-    if (!GameboyJS.Memory.readBit(LCDC, 5)) {
+    if (!GameboyJS.Util.readBit(LCDC, 5)) {
         return;
     }
 
     var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Memory.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+    var mapStart = GameboyJS.Util.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
-    if (GameboyJS.Memory.readBit(LCDC, 4)) {
+    if (GameboyJS.Util.readBit(LCDC, 4)) {
         dataStart = 0x8000;
     } else {
         dataStart = 0x8800;

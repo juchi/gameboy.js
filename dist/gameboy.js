@@ -125,7 +125,7 @@ CPU.prototype.frame = function() {
             }
 
             var elapsed = this.clock.c - oldInstrCount;
-            vblank = this.screen.update(elapsed);
+            vblank = this.gpu.update(elapsed);
             this.timer.update(elapsed);
             this.input.update();
             this.apu.update(elapsed);
@@ -182,7 +182,7 @@ CPU.prototype.checkInterrupt = function() {
     }
     for (var i = 0; i < 5; i++) {
         var IFval = this.memory.rb(0xFF0F);
-        if (GameboyJS.Memory.readBit(IFval, i) && this.isInterruptEnable(i)) {
+        if (GameboyJS.Util.readBit(IFval, i) && this.isInterruptEnable(i)) {
             IFval &= (0xFF - (1<<i));
             this.memory.wb(0xFF0F, IFval);
             this.disableInterrupts();
@@ -202,7 +202,7 @@ CPU.prototype.requestInterrupt = function(type) {
 };
 
 CPU.prototype.isInterruptEnable = function(type) {
-    return GameboyJS.Memory.readBit(this.memory.rb(0xFFFF), type) != 0;
+    return GameboyJS.Util.readBit(this.memory.rb(0xFFFF), type) != 0;
 };
 
 CPU.prototype.enableInterrupts = function() {
@@ -237,7 +237,8 @@ var GameboyJS;
 
 var Debug = {};
 // Output a range of 16 memory addresses
-Debug.view_memory = function(addr, memory) {
+Debug.view_memory = function(addr, gameboy) {
+    var memory = gameboy.cpu.memory;
     addr = addr & 0xFFF0;
     var pad = '00';
     var str = addr.toString(16) + ':';
@@ -252,10 +253,21 @@ Debug.view_memory = function(addr, memory) {
     }
 
     return str;
-}
+};
 
-Debug.view_tile = function(screen, index) {
-    var tileData = screen.readTileData(index, 0x8800);
+Debug.view_tile = function(gameboy, index, dataStart) {
+    var memory = gameboy.cpu.memory;
+    var screen = gameboy.screen;
+    var LCDC = screen.deviceram(screen.LCDC);
+    if (typeof dataStart === 'undefined') {
+        dataStart = 0x8000;
+        if (!GameboyJS.Util.readBit(LCDC, 4)) {
+            dataStart = 0x8800;
+            index = GameboyJS.cpuOps._getSignedValue(index) + 128;
+        }
+    }
+
+    var tileData = screen.readTileData(index, dataStart);
 
     var pixelData = new Array(8 * 8)
     for (var line = 0; line < 8; line++) {
@@ -273,8 +285,444 @@ Debug.view_tile = function(screen, index) {
     while (pixelData.length) {
         console.log(i++ + ' ' + pixelData.splice(0, 8).join(''));
     }
-}
+};
+
+Debug.list_visible_sprites = function(gameboy) {
+    var memory = gameboy.cpu.memory;
+    var indexes = new Array();
+    for (var i = 0xFE00; i < 0xFE9F; i += 4) {
+        var x = memory.oamram(i + 1);
+        var y = memory.oamram(i);
+        var tileIndex = memory.oamram(i + 2);
+        if (x == 0 || x >= 168) {
+            continue;
+        }
+        indexes.push({oamIndex:i, x:x, y:y, tileIndex:tileIndex});
+    }
+
+    return indexes;
+};
 GameboyJS.Debug = Debug;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+var Screen;
+var GPU = function(screen, cpu) {
+    this.cpu = cpu;
+    this.screen = screen;
+
+    this.LCDC= 0xFF40;
+    this.STAT= 0xFF41;
+    this.SCY = 0xFF42;
+    this.SCX = 0xFF43;
+    this.LY  = 0xFF44;
+    this.LYC = 0xFF45;
+    this.BGP = 0xFF47;
+    this.OBP0= 0xFF48;
+    this.OBP1= 0xFF49;
+    this.WY  = 0xFF4A;
+    this.WX  = 0xFF4B;
+
+    this.vram = cpu.memory.vram.bind(cpu.memory);
+
+    this.OAM_START = 0xFE00;
+    this.OAM_END   = 0xFE9F;
+    this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
+    this.oamram = cpu.memory.oamram.bind(cpu.memory);
+    this.VBLANK_TIME = 70224;
+    this.clock = 0;
+    this.mode = 2;
+    this.line = 0;
+
+    Screen = GameboyJS.Screen;
+    this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
+    this.tileBuffer = new Array(8);
+};
+
+GPU.tilemap = {
+    HEIGHT: 32,
+    WIDTH: 32,
+    START_0: 0x9800,
+    START_1: 0x9C00,
+    LENGTH: 0x0400 // 1024 bytes = 32*32
+};
+
+GPU.prototype.update = function(clockElapsed) {
+    this.clock += clockElapsed;
+    var vblank = false;
+
+    switch (this.mode) {
+        case 0: // HBLANK
+            if (this.clock >= 204) {
+                this.clock -= 204;
+                this.line++;
+                this.updateLY();
+                if (this.line == 144) {
+                    this.setMode(1);
+                    vblank = true;
+                    this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.VBLANK);
+                    this.drawFrame();
+                } else {
+                    this.setMode(2);
+                }
+            }
+            break;
+        case 1: // VBLANK
+            if (this.clock >= 456) {
+                this.clock -= 456;
+                this.line++;
+                if (this.line > 153) {
+                    this.line = 0;
+                    this.setMode(2);
+                }
+                this.updateLY();
+            }
+
+            break;
+        case 2: // SCANLINE OAM
+            if (this.clock >= 80) {
+                this.clock -= 80;
+                this.setMode(3);
+            }
+            break;
+        case 3: // SCANLINE VRAM
+            if (this.clock >= 172) {
+                this.clock -= 172;
+                this.drawScanLine(this.line);
+                this.setMode(0);
+            }
+            break;
+    }
+
+    return vblank;
+};
+
+GPU.prototype.updateLY = function() {
+    this.deviceram(this.LY, this.line);
+    var STAT = this.deviceram(this.STAT);
+    if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
+        this.deviceram(this.STAT, STAT | (1 << 2));
+        if (STAT & (1 << 6)) {
+            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
+        }
+    } else {
+        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
+    }
+};
+
+GPU.prototype.setMode = function(mode) {
+    this.mode = mode;
+    var newSTAT = this.deviceram(this.STAT);
+    newSTAT &= 0xFC;
+    newSTAT |= mode;
+    this.deviceram(this.STAT, newSTAT);
+
+    if (mode < 3) {
+        if (newSTAT & (1 << (3+mode))) {
+            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
+        }
+    }
+};
+
+// Push one scanline into the main buffer
+GPU.prototype.drawScanLine = function(line) {
+    var LCDC = this.deviceram(this.LCDC);
+    this.drawBackground(LCDC, line);
+    // TODO draw a line for sprites and window here too
+};
+
+GPU.prototype.drawFrame = function() {
+    var LCDC = this.deviceram(this.LCDC);
+    var enable = GameboyJS.Util.readBit(LCDC, 7);
+    if (enable) {
+        this.drawSprites(LCDC);
+        this.drawWindow(LCDC);
+    }
+    this.screen.render(this.buffer);
+};
+
+GPU.prototype.drawBackground = function(LCDC, line) {
+    if (!GameboyJS.Util.readBit(LCDC, 0)) {
+        return;
+    }
+
+    var lineBuffer = new Array(Screen.physics.WIDTH);
+    var mapStart = GameboyJS.Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+
+    var dataStart, signedIndex = false;
+    if (GameboyJS.Util.readBit(LCDC, 4)) {
+        dataStart = 0x8000;
+    } else {
+        dataStart = 0x8800;
+        signedIndex = true;
+    }
+
+    var bgx = this.deviceram(this.SCX);
+    var bgy = this.deviceram(this.SCY);
+    var tileLine = (line + bgy) % 8;
+
+    // cache object to store read tiles from this frame
+    var cacheTile = {};
+
+    // browse BG tilemap for the line to render
+    var tileRow = (((bgy + line) / 8) | 0) % 32;
+    var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
+    var lastTile = firstTile + Screen.physics.WIDTH / 8 + 1;
+    if (lastTile % 32 < firstTile % 32) {
+        lastTile -= 32;
+    }
+    var x = (firstTile % 32) * 8 - bgx; // x position of the first tile's leftmost pixel
+    for (var i = firstTile; i != lastTile; i++, i%32 == 0 ? i-=32 : null) {
+        var tileIndex = this.vram(i + mapStart);
+
+        if (signedIndex) {
+            tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
+        }
+
+        // try to retrieve the tile data from the cache, or use readTileData() to read from ram
+        // TODO find a better cache system now that the BG is rendered line by line
+        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
+
+        this.drawTileLine(tileData, tileLine);
+        this.copyTileLine(lineBuffer, this.tileBuffer, x);
+        x += 8;
+    }
+
+    var bgPalette = GPU.getPalette(this.deviceram(this.BGP));
+    this.copyLineToBuffer(lineBuffer, line, bgPalette);
+};
+
+// Copy a tile line from a tileBuffer to a line buffer, at a given x position
+GPU.prototype.copyTileLine = function(lineBuffer, tileBuffer, x) {
+    // copy tile line to buffer
+    for (var k = 0; k < 8; k++, x++) {
+        if (x < 0 || x > Screen.physics.WIDTH) continue;
+        lineBuffer[x] = tileBuffer[k];
+    }
+};
+
+// Copy a scanline into the main buffer
+GPU.prototype.copyLineToBuffer = function(lineData, line, palette) {
+    for (var x = 0; x < Screen.physics.WIDTH; x++) {
+        var color = lineData[x];
+        this.drawPixel(x, line, palette[color]);
+    }
+};
+
+// Write a line of a tile (8 pixels) into a buffer array
+GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip, spriteMode) {
+    xflip = xflip | 0;
+    yflip = yflip | 0;
+    spriteMode = spriteMode | 0;
+    var byteIndex = line * 2;
+    var l = yflip ? 7 - line : line;
+    var b1 = tileData[byteIndex++];
+    var b2 = tileData[byteIndex++];
+
+    for (var pixel = 0; pixel < 8; pixel++) {
+        var mask = (1 << (7-pixel));
+        var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+        if (spriteMode && colorValue == 0) continue;
+        var p = xflip ? 7 - pixel : pixel;
+        this.tileBuffer[p] = colorValue;
+    }
+};
+
+GPU.prototype.drawSprites = function(LCDC) {
+    if (!GameboyJS.Util.readBit(LCDC, 1)) {
+        return;
+    }
+    var spriteHeight = GameboyJS.Util.readBit(LCDC, 2) ? 16 : 8;
+    var spritePalettes = {};
+    spritePalettes[0] = GPU.getPalette(this.deviceram(this.OBP0));
+    spritePalettes[1] = GPU.getPalette(this.deviceram(this.OBP1));
+
+    // cache object to store read tiles from this frame
+    var cacheTile = {};
+
+    var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
+    for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
+        var y = this.oamram(i);
+        var x = this.oamram(i+1);
+        var tileIndex = this.oamram(i+2);
+        var flags = this.oamram(i+3);
+
+        if (y == 0 || y >= 160 || x == 0 || x >= 168) {
+            continue;
+        }
+        var paletteNumber = GameboyJS.Util.readBit(flags, 4);
+        var xflip = GameboyJS.Util.readBit(flags, 5);
+        var yflip = GameboyJS.Util.readBit(flags, 6);
+        var priority = GameboyJS.Util.readBit(flags, 7);
+        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, 0x8000, spriteHeight * 2));
+
+        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+        if (spriteHeight == 16) {
+            tileData = tileData.slice(16); // get the second tile of the sprite
+            this.drawTile(tileData, x - 8, y - 8, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
+        }
+    }
+
+    for (var x = 0; x < Screen.physics.WIDTH; x++) {
+        for (var y = 0; y < Screen.physics.HEIGHT; y++) {
+            var color = buffer[x + y * 160] | 0;
+            if (color === 0) continue;
+            if (priority === 1 && this.getPixel(x, y) !== 0) continue;
+            this.drawPixel(x, y, spritePalettes[paletteNumber][color]);
+        }
+    }
+};
+
+GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
+    xflip = xflip | 0;
+    yflip = yflip | 0;
+    spriteMode = spriteMode | 0;
+    var byteIndex = 0;
+    for (var line = 0; line < 8; line++) {
+        var l = yflip ? 7 - line : line;
+        var b1 = tileData[byteIndex++];
+        var b2 = tileData[byteIndex++];
+
+        for (var pixel = 0; pixel < 8; pixel++) {
+            var mask = (1 << (7-pixel));
+            var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+            if (spriteMode && colorValue == 0) continue;
+            var p = xflip ? 7 - pixel : pixel;
+            var bufferIndex = (x + p) + (y + l) * bufferWidth;
+            buffer[bufferIndex] = colorValue;
+        }
+    }
+};
+
+// get an array of tile bytes data (16 entries for 8*8px)
+GPU.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
+    tileSize = tileSize || 0x10; // 16 bytes / tile by default (8*8 px)
+    var tileData = new Array();
+
+    var tileAddressStart = dataStart + (tileIndex * 0x10);
+    for (var i = tileAddressStart; i < tileAddressStart + tileSize; i++) {
+        tileData.push(this.vram(i));
+    }
+
+    return tileData;
+};
+
+GPU.prototype.drawWindow = function(LCDC) {
+    if (!GameboyJS.Util.readBit(LCDC, 5)) {
+        return;
+    }
+
+    var buffer = new Array(256*256);
+    var mapStart = GameboyJS.Util.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+
+    var dataStart, signedIndex = false;
+    if (GameboyJS.Util.readBit(LCDC, 4)) {
+        dataStart = 0x8000;
+    } else {
+        dataStart = 0x8800;
+        signedIndex = true;
+    }
+
+    // browse Window tilemap
+    for (var i = 0; i < GPU.tilemap.LENGTH; i++) {
+        var tileIndex = this.vram(i + mapStart);
+
+        if (signedIndex) {
+            tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
+        }
+
+        var tileData = this.readTileData(tileIndex, dataStart);
+        var x = i % GPU.tilemap.WIDTH;
+        var y = (i / GPU.tilemap.WIDTH) | 0;
+        this.drawTile(tileData, x * 8, y * 8, buffer, 256);
+    }
+
+    var wx = this.deviceram(this.WX) - 7;
+    var wy = this.deviceram(this.WY);
+    for (var x = Math.max(0, -wx); x < Math.min(Screen.physics.WIDTH, Screen.physics.WIDTH - wx); x++) {
+        for (var y = Math.max(0, -wy); y < Math.min(Screen.physics.HEIGHT, Screen.physics.HEIGHT - wy); y++) {
+            var color = buffer[(x & 255) + (y & 255) * 256];
+            this.drawPixel(x + wx, y + wy, color);
+        }
+    }
+};
+
+GPU.prototype.drawPixel = function(x, y, color) {
+    this.buffer[y * 160 + x] = color;
+};
+
+GPU.prototype.getPixel = function(x, y) {
+    return this.buffer[y * 160 + x];
+};
+
+// Get the palette mapping from a given palette byte as stored in memory
+// A palette will map a tile color to a final palette color index
+// used with Screen.colors to get a shade of grey
+GPU.getPalette = function(paletteByte) {
+    var palette = [];
+    for (var i = 0; i < 8; i += 2) {
+        var shade = (paletteByte & (3 << i)) >> i;
+        palette.push(shade);
+    }
+    return palette;
+};
+
+GameboyJS.GPU = GPU;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+
+// Screen device
+var Screen = function(canvas) {
+    canvas.width = Screen.physics.WIDTH * Screen.physics.PIXELSIZE;
+    canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
+
+    this.context = canvas.getContext('2d');
+    this.imageData = this.context.createImageData(canvas.width, canvas.height);
+};
+
+Screen.colors = [
+    0xFF,
+    0xAA,
+    0x55,
+    0x00
+];
+
+Screen.physics = {
+    WIDTH    : 160,
+    HEIGHT   : 144,
+    PIXELSIZE: 1,
+    FREQUENCY: 60
+};
+
+Screen.prototype.clearScreen = function() {
+    this.context.fillStyle = '#FFF';
+    this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
+};
+
+Screen.prototype.fillImageData = function(buffer) {
+    for (var y = 0; y < Screen.physics.HEIGHT; y++) {
+        for (var x = 0; x < Screen.physics.WIDTH; x++) {
+            var offset = y * 160 + x;
+            var v = Screen.colors[buffer[offset]];
+            this.imageData.data[offset * 4] = v;
+            this.imageData.data[offset * 4 + 1] = v;
+            this.imageData.data[offset * 4 + 2] = v;
+            this.imageData.data[offset * 4 + 3] = 255;
+        }
+    }
+};
+
+Screen.prototype.render = function(buffer) {
+    this.fillImageData(buffer);
+    this.context.putImageData(this.imageData, 0, 0);
+}
+
+GameboyJS.Screen = Screen;
 }(GameboyJS || (GameboyJS = {})));
 
 var GameboyJS;
@@ -377,6 +825,8 @@ Input.keys = {
 
 Input.prototype.pressKey = function(key) {
     this.state |= Input.keys[key];
+
+    this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
 };
 
 Input.prototype.releaseKey = function(key) {
@@ -386,22 +836,17 @@ Input.prototype.releaseKey = function(key) {
 
 Input.prototype.update = function() {
     var value = this.memory.rb(this.P1);
-    value = (~value) & 0x30;
+    value = ((~value) & 0x30); // invert the value so 1 means 'active'
     if (value & 0x10) { // direction keys listened
-        value |= this.state & 0x0F;
+        value |= (this.state & 0x0F);
     } else if (value & 0x20) { // action keys listened
         value |= ((this.state & 0xF0) >> 4);
     } else if ((value & 0x30) == 0) { // no keys listened
         value &= 0xF0;
     }
 
-    if (this.memory.rb(this.P1) & value & 0x0F) {
-        this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
-        console.log('hilo interrupt');
-    }
-
-    value = (~value) & 0x3F;
-    this.memory.wb(this.P1, value);
+    value = ((~value) & 0x3F); // invert back
+    this.memory[this.P1] = value;
 };
 GameboyJS.Input = Input;
 }(GameboyJS || (GameboyJS = {})));
@@ -424,33 +869,31 @@ var GameboyJS;
 // Underscore-prefixed functions are here to delegate the logic between similar operations,
 // they should not be called from outside
 //
-// Some helper functions are defined at the end of the object
-//
 // It's up to each operation to update the CPU clock
 var ops = {
     LDrrnn: function(p, r1, r2) {p.wr(r2, p.memory.rb(p.r.pc));p.wr(r1, p.memory.rb(p.r.pc+1)); p.r.pc+=2;p.clock.c += 12;},
-    LDrrar: function(p, r1, r2, r3) {ops._LDav(p, ops._getRegAddr(p, r1, r2), p.r[r3]);p.clock.c += 8;},
-    LDrrra: function(p, r1, r2, r3) {p.wr(r1, p.memory.rb(ops._getRegAddr(p, r2, r3)));p.clock.c += 8;},
+    LDrrar: function(p, r1, r2, r3) {ops._LDav(p, GameboyJS.Util.getRegAddr(p, r1, r2), p.r[r3]);p.clock.c += 8;},
+    LDrrra: function(p, r1, r2, r3) {p.wr(r1, p.memory.rb(GameboyJS.Util.getRegAddr(p, r2, r3)));p.clock.c += 8;},
     LDrn:   function(p, r1) {p.wr(r1, p.memory.rb(p.r.pc++));p.clock.c += 8;},
     LDrr:   function(p, r1, r2) {p.wr(r1, p.r[r2]);p.clock.c += 4;},
     LDrar:  function(p, r1, r2) {p.memory.wb(p.r[r1]+0xFF00, p.r[r2]);p.clock.c += 8;},
     LDrra:  function(p, r1, r2) {p.wr(r1, p.memory.rb(p.r[r2]+0xFF00));p.clock.c += 8;},
     LDspnn: function(p) {p.wr('sp', (p.memory.rb(p.r.pc + 1) << 8) + p.memory.rb(p.r.pc));p.r.pc+=2;p.clock.c += 12;},
-    LDsprr: function(p, r1, r2) {p.wr('sp', ops._getRegAddr(p, r1, r2));p.clock.c += 8;},
+    LDsprr: function(p, r1, r2) {p.wr('sp', GameboyJS.Util.getRegAddr(p, r1, r2));p.clock.c += 8;},
     LDnnar: function(p, r1) {var addr=(p.memory.rb(p.r.pc + 1) << 8) + p.memory.rb(p.r.pc);p.memory.wb(addr,p.r[r1]);p.r.pc+=2; p.clock.c += 16;},
     LDrnna: function(p, r1) {var addr=(p.memory.rb(p.r.pc + 1) << 8) + p.memory.rb(p.r.pc);p.wr(r1, p.memory.rb(addr));p.r.pc+=2; p.clock.c += 16;},
-    LDrrspn:function(p, r1, r2) {var rel = p.memory.rb(p.r.pc++);rel=ops._getSignedValue(rel);var val=p.r.sp + rel;
+    LDrrspn:function(p, r1, r2) {var rel = p.memory.rb(p.r.pc++);rel=GameboyJS.Util.getSignedValue(rel);var val=p.r.sp + rel;
         var c = (p.r.sp&0xFF) + (rel&0xFF) > 0xFF;var h = (p.r.sp & 0xF) + (rel & 0xF) > 0xF;val &= 0xFFFF;
         var f = 0; if(h)f|=0x20;if(c)f|=0x10;p.wr('F', f);
         p.wr(r1, val >> 8);p.wr(r2, val&0xFF);
         p.clock.c+=12;},
     LDnnsp: function(p) {var addr = p.memory.rb(p.r.pc++) + (p.memory.rb(p.r.pc++)<<8); ops._LDav(p, addr, p.r.sp & 0xFF);ops._LDav(p, addr+1, p.r.sp >> 8);p.clock.c+=20;},
-    LDrran: function(p, r1, r2){var addr = ops._getRegAddr(p, r1, r2);ops._LDav(p, addr, p.memory.rb(p.r.pc++));p.clock.c+=12;},
+    LDrran: function(p, r1, r2){var addr = GameboyJS.Util.getRegAddr(p, r1, r2);ops._LDav(p, addr, p.memory.rb(p.r.pc++));p.clock.c+=12;},
     _LDav:  function(p, addr, val){p.memory.wb(addr, val);},
     LDHnar: function(p, r1){p.memory.wb(0xFF00 + p.memory.rb(p.r.pc++), p.r[r1]);p.clock.c+=12;},
     LDHrna: function(p, r1){p.wr(r1, p.memory.rb(0xFF00 + p.memory.rb(p.r.pc++)));p.clock.c+=12;},
     INCrr:  function(p, r1, r2) {p.wr(r2, (p.r[r2]+1)&0xFF); if (p.r[r2] == 0) p.wr(r1, (p.r[r1]+1)&0xFF);p.clock.c += 8;},
-    INCrra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var val = (p.memory.rb(addr)+1)&0xFF;var z = val==0;var h=(p.memory.rb(addr)&0xF)+1 > 0xF;
+    INCrra: function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var val = (p.memory.rb(addr)+1)&0xFF;var z = val==0;var h=(p.memory.rb(addr)&0xF)+1 > 0xF;
         p.memory.wb(addr, val);
         p.r.F&=0x10;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c+=12;},
@@ -463,7 +906,7 @@ var ops = {
     DECr:   function(p, r1) {var h = (p.r[r1]&0xF) < 1;p.wr(r1, (p.r[r1] - 1) & 0xFF);var z = p.r[r1]==0;
         p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c += 4;},
-    DECrra: function(p, r1, r2){var addr = ops._getRegAddr(p, r1, r2);var val = (p.memory.rb(addr)-1)&0xFF;var z = val==0;var h=(p.memory.rb(addr)&0xF) < 1;
+    DECrra: function(p, r1, r2){var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var val = (p.memory.rb(addr)-1)&0xFF;var z = val==0;var h=(p.memory.rb(addr)&0xF) < 1;
         p.memory.wb(addr, val);
         p.r.F&=0x10;p.r.F|=0x40;if(h)p.r.F|=0x20;if(z)p.r.F|=0x80;
         p.clock.c+=12;},
@@ -473,7 +916,7 @@ var ops = {
             var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.wr('F', f);},
     ADDrrrr:function(p, r1, r2, r3, r4) {ops._ADDrrn(p, r1, r2, (p.r[r3]<<8) + p.r[r4]); p.clock.c+=8;},
     ADDrrsp:function(p, r1, r2) {ops._ADDrrn(p, r1, r2, p.r.sp); p.clock.c += 8;},
-    ADDspn: function(p) {var v = p.memory.rb(p.r.pc++);v = ops._getSignedValue(v);
+    ADDspn: function(p) {var v = p.memory.rb(p.r.pc++);v = GameboyJS.Util.getSignedValue(v);
         var c = ((p.r.sp&0xFF) + (v&0xFF)) > 0xFF; var h = (p.r.sp & 0xF) + (v&0xF) > 0xF;
         var f = 0; if(h)f|=0x20;if(c)f|=0x10;p.wr('F', f);
         p.wr('sp', (p.r.sp + v) & 0xFFFF);
@@ -488,13 +931,13 @@ var ops = {
         var c = p.r.F&0x10?1:0;var h=((p.r[r1]&0xF)+(n&0xF)+c)&0x10;
         p.wr(r1, p.r[r1]+n+c);c=p.r[r1]&0x100;p.r[r1]&=0xFF;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.r.F=f;},
-    ADCrrra:function(p, r1, r2, r3) {var n = p.memory.rb(ops._getRegAddr(p, r2, r3)); ops._ADCrn(p, r1, n); p.clock.c += 8;},
-    ADDrrra:function(p, r1, r2, r3) {var v = p.memory.rb(ops._getRegAddr(p, r2, r3));var h=((p.r[r1]&0xF)+(v&0xF))&0x10;p.wr(r1, p.r[r1]+v);var c=p.r[r1]&0x100;p.r[r1]&=0xFF;
+    ADCrrra:function(p, r1, r2, r3) {var n = p.memory.rb(GameboyJS.Util.getRegAddr(p, r2, r3)); ops._ADCrn(p, r1, n); p.clock.c += 8;},
+    ADDrrra:function(p, r1, r2, r3) {var v = p.memory.rb(GameboyJS.Util.getRegAddr(p, r2, r3));var h=((p.r[r1]&0xF)+(v&0xF))&0x10;p.wr(r1, p.r[r1]+v);var c=p.r[r1]&0x100;p.r[r1]&=0xFF;
         var f = 0;if (p.r[r1]==0)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.wr('F', f);
         p.clock.c += 8;},
     SUBr:   function(p, r1) {var n = p.r[r1];ops._SUBn(p, n);p.clock.c += 4;},
     SUBn:   function(p) {var n = p.memory.rb(p.r.pc++);ops._SUBn(p, n);p.clock.c += 8;},
-    SUBrra: function(p, r1, r2) {var n = p.memory.rb(ops._getRegAddr(p, r1, r2));ops._SUBn(p, n);p.clock.c+=8;},
+    SUBrra: function(p, r1, r2) {var n = p.memory.rb(GameboyJS.Util.getRegAddr(p, r1, r2));ops._SUBn(p, n);p.clock.c+=8;},
     _SUBn:  function(p, n) {var c = p.r.A < n;var h = (p.r.A&0xF) < (n&0xF);
         p.wr('A', p.r.A - n);p.r.A&=0xFF; var z = p.r.A==0;
         var f = 0x40;if (z)f|=0x80;if (h)f|=0x20;if (c)f|=0x10;p.wr('F', f);},
@@ -510,51 +953,51 @@ var ops = {
     ORrra:  function(p, r1, r2) {p.r.A|=p.memory.rb((p.r[r1] << 8)+ p.r[r2]);p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},
     ANDr:   function(p, r1) {p.r.A&=p.r[r1];p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 4;},
     ANDn:   function(p) {p.r.A&=p.memory.rb(p.r.pc++);p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 8;},
-    ANDrra: function(p, r1, r2) {p.r.A&=p.memory.rb(ops._getRegAddr(p, r1, r2));p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 8;},
+    ANDrra: function(p, r1, r2) {p.r.A&=p.memory.rb(GameboyJS.Util.getRegAddr(p, r1, r2));p.r.F=(p.r.A==0)?0xA0:0x20;p.clock.c += 8;},
     XORr:   function(p, r1) {p.r.A^=p.r[r1];p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 4;},
     XORn:   function(p) {p.r.A^=p.memory.rb(p.r.pc++);p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},
     XORrra: function(p, r1, r2) {p.r.A^=p.memory.rb((p.r[r1] << 8)+ p.r[r2]);p.r.F=(p.r.A==0)?0x80:0x00;p.clock.c += 8;},
     CPr:    function(p, r1) {var n = p.r[r1];ops._CPn(p, n); p.clock.c += 4;},
     CPn:    function(p) {var n =p.memory.rb(p.r.pc++);ops._CPn(p, n);p.clock.c+=8;},
-    CPrra:  function(p, r1, r2) {var n = p.memory.rb(ops._getRegAddr(p, r1, r2));ops._CPn(p, n);p.clock.c+=8;},
+    CPrra:  function(p, r1, r2) {var n = p.memory.rb(GameboyJS.Util.getRegAddr(p, r1, r2));ops._CPn(p, n);p.clock.c+=8;},
     _CPn:   function(p, n) {
         var c = p.r.A < n;var z = p.r.A == n;var h = (p.r.A&0xF) < (n&0xF);
         var f = 0x40;if(z)f+=0x80;if (h)f+=0x20;if (c)f+=0x10;p.r.F=f;},
     RRCr:   function(p, r1) {p.r.F=0;var out=p.r[r1] & 0x01;if(out)p.r.F|=0x10;p.r[r1]=(p.r[r1]>>1)|(out*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    RRCrra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);p.r.F=0;var out=p.memory.rb(addr)&0x01;if(out)p.r.F|=0x10;p.memory.wb(addr, (p.memory.rb(addr)>>1)|(out*0x80));if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    RRCrra: function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);p.r.F=0;var out=p.memory.rb(addr)&0x01;if(out)p.r.F|=0x10;p.memory.wb(addr, (p.memory.rb(addr)>>1)|(out*0x80));if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     RLCr:   function(p, r1) {p.r.F=0;var out=p.r[r1]&0x80?1:0;if(out)p.r.F|=0x10;p.r[r1]=((p.r[r1]<<1)+out)&0xFF;if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    RLCrra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);p.r.F=0;var out=p.memory.rb(addr)&0x80?1:0;if(out)p.r.F|=0x10;p.memory.wb(addr, ((p.memory.rb(addr)<<1)+out)&0xFF);if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    RLCrra: function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);p.r.F=0;var out=p.memory.rb(addr)&0x80?1:0;if(out)p.r.F|=0x10;p.memory.wb(addr, ((p.memory.rb(addr)<<1)+out)&0xFF);if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     RLr:    function(p, r1) {var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.r[r1]&0x80;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=((p.r[r1]<<1)+c)&0xFF;if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    RLrra:  function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.memory.rb(addr)&0x80;out?p.r.F|=0x10:p.r.F&=0xEF;p.memory.wb(addr,((p.memory.rb(addr)<<1)+c)&0xFF);if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    RLrra:  function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.memory.rb(addr)&0x80;out?p.r.F|=0x10:p.r.F&=0xEF;p.memory.wb(addr,((p.memory.rb(addr)<<1)+c)&0xFF);if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     RRr:    function(p, r1) {var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.r[r1]&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.r[r1]=(p.r[r1]>>1)|(c*0x80);if(p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    RRrra:  function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.memory.rb(addr)&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.memory.wb(addr,(p.memory.rb(addr)>>1)|(c*0x80));if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    RRrra:  function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var c=(p.r.F&0x10)?1:0;p.r.F=0;var out=p.memory.rb(addr)&0x01;out?p.r.F|=0x10:p.r.F&=0xEF;p.memory.wb(addr,(p.memory.rb(addr)>>1)|(c*0x80));if(p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     SRAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;var msb=p.r[r1]&0x80;p.r[r1]=(p.r[r1]>>1)|msb;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    SRArra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);p.r.F = 0;if (p.memory.rb(addr)&0x01)p.r.F|=0x10;var msb=p.memory.rb(addr)&0x80;p.memory.wb(addr, (p.memory.rb(addr)>>1)|msb);if (p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    SRArra: function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);p.r.F = 0;if (p.memory.rb(addr)&0x01)p.r.F|=0x10;var msb=p.memory.rb(addr)&0x80;p.memory.wb(addr, (p.memory.rb(addr)>>1)|msb);if (p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     SLAr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x80)p.r.F|=0x10;p.r[r1]=(p.r[r1]<<1)&0xFF;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    SLArra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);p.r.F = 0;if (p.memory.rb(addr)&0x80)p.r.F|=0x10;p.memory.wb(addr, (p.memory.rb(addr)<<1)&0xFF);if (p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    SLArra: function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);p.r.F = 0;if (p.memory.rb(addr)&0x80)p.r.F|=0x10;p.memory.wb(addr, (p.memory.rb(addr)<<1)&0xFF);if (p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     SRLr:   function(p, r1) {p.r.F = 0;if (p.r[r1]&0x01)p.r.F|=0x10;p.r[r1]=p.r[r1]>>1;if (p.r[r1]==0)p.r.F|=0x80;p.clock.c+=4;},
-    SRLrra: function(p, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);p.r.F = 0;if (p.memory.rb(addr)&0x01)p.r.F|=0x10;p.memory.wb(addr, p.memory.rb(addr)>>1);if (p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
+    SRLrra: function(p, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);p.r.F = 0;if (p.memory.rb(addr)&0x01)p.r.F|=0x10;p.memory.wb(addr, p.memory.rb(addr)>>1);if (p.memory.rb(addr)==0)p.r.F|=0x80;p.clock.c+=12;},
     BITir:  function(p, i, r1) {var mask=1<<i;var z=(p.r[r1]&mask)?0:1;var f=p.r.F&0x10;f |= 0x20;if(z)f|=0x80;p.r.F=f;p.clock.c+=4;},
-    BITirra:function(p, i, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var mask=1<<i;var z=(p.memory.rb(addr)&mask)?0:1;var f=p.r.F&0x10;f |= 0x20;if(z)f|=0x80;p.r.F=f;p.clock.c+=8;},
+    BITirra:function(p, i, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var mask=1<<i;var z=(p.memory.rb(addr)&mask)?0:1;var f=p.r.F&0x10;f |= 0x20;if(z)f|=0x80;p.r.F=f;p.clock.c+=8;},
     SETir:  function(p, i, r1) {var mask=1<<i;p.r[r1]|=mask;p.clock.c += 4;},
-    SETirra:function(p, i, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var mask=1<<i;p.memory.wb(addr, p.memory.rb(addr)|mask);p.clock.c += 12;},
+    SETirra:function(p, i, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var mask=1<<i;p.memory.wb(addr, p.memory.rb(addr)|mask);p.clock.c += 12;},
     RESir:  function(p, i, r1) {var mask=0xFF - (1<<i);p.r[r1]&=mask;p.clock.c += 4;},
-    RESirra:function(p, i, r1, r2) {var addr = ops._getRegAddr(p, r1, r2);var mask=0xFF - (1<<i);p.memory.wb(addr, p.memory.rb(addr)&mask);p.clock.c += 12;},
+    RESirra:function(p, i, r1, r2) {var addr = GameboyJS.Util.getRegAddr(p, r1, r2);var mask=0xFF - (1<<i);p.memory.wb(addr, p.memory.rb(addr)&mask);p.clock.c += 12;},
     SWAPr:  function(p, r1) {p.r[r1] = ops._SWAPn(p, p.r[r1]);p.clock.c+=4;},
     SWAPrra:function(p, r1, r2){var addr = (p.r[r1] << 8)+ p.r[r2]; p.memory.wb(addr, ops._SWAPn(p, p.memory.rb(addr))); p.clock.c+=12;},
     _SWAPn: function(p, n){p.r.F = n==0?0x80:0;return ((n&0xF0) >> 4) | ((n&0x0F) << 4);},
     JPnn:   function(p) {p.wr('pc', (p.memory.rb(p.r.pc+1) << 8) + p.memory.rb(p.r.pc));p.clock.c += 16;},
-    JRccn:  function(p, cc) {if (ops._testFlag(p, cc)){var v=p.memory.rb(p.r.pc++);v=ops._getSignedValue(v);p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}p.clock.c += 8;},
-    JPccnn: function(p, cc) {if (ops._testFlag(p, cc)){p.wr('pc', (p.memory.rb(p.r.pc+1) << 8) + p.memory.rb(p.r.pc));p.clock.c+=4;}else{p.r.pc+=2;}p.clock.c += 12;},
+    JRccn:  function(p, cc) {if (GameboyJS.Util.testFlag(p, cc)){var v=p.memory.rb(p.r.pc++);v=GameboyJS.Util.getSignedValue(v);p.r.pc += v;p.clock.c+=4;}else{p.r.pc++;}p.clock.c += 8;},
+    JPccnn: function(p, cc) {if (GameboyJS.Util.testFlag(p, cc)){p.wr('pc', (p.memory.rb(p.r.pc+1) << 8) + p.memory.rb(p.r.pc));p.clock.c+=4;}else{p.r.pc+=2;}p.clock.c += 12;},
     JPrr:   function(p, r1, r2) {p.r.pc = (p.r[r1] << 8) + p.r[r2];p.clock.c += 4;},
-    JRn:    function(p) {var v=p.memory.rb(p.r.pc++);v=ops._getSignedValue(v);p.r.pc += v;p.clock.c += 12;},
+    JRn:    function(p) {var v=p.memory.rb(p.r.pc++);v=GameboyJS.Util.getSignedValue(v);p.r.pc += v;p.clock.c += 12;},
     PUSHrr: function(p, r1, r2) {p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp, p.r[r1]);p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp, p.r[r2]);p.clock.c+=16;},
     POPrr:  function(p, r1, r2) {p.wr(r2, p.memory.rb(p.r.sp));p.wr('sp', p.r.sp+1);p.wr(r1, p.memory.rb(p.r.sp));p.wr('sp', p.r.sp+1);p.clock.c+=12;},
     RSTn:   function(p, n) {p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp,p.r.pc>>8);p.wr('sp', p.r.sp-1);p.memory.wb(p.r.sp,p.r.pc&0xFF);p.r.pc=n;p.clock.c+=16;},
     RET:    function(p) {p.r.pc = p.memory.rb(p.r.sp);p.wr('sp', p.r.sp+1);p.r.pc+=p.memory.rb(p.r.sp)<<8;p.wr('sp', p.r.sp+1);p.clock.c += 16;},
-    RETcc:  function(p, cc) {if (ops._testFlag(p, cc)){p.r.pc = p.memory.rb(p.r.sp);p.wr('sp', p.r.sp+1);p.r.pc+=p.memory.rb(p.r.sp)<<8;p.wr('sp', p.r.sp+1);p.clock.c+=12;}p.clock.c+=8;},
+    RETcc:  function(p, cc) {if (GameboyJS.Util.testFlag(p, cc)){p.r.pc = p.memory.rb(p.r.sp);p.wr('sp', p.r.sp+1);p.r.pc+=p.memory.rb(p.r.sp)<<8;p.wr('sp', p.r.sp+1);p.clock.c+=12;}p.clock.c+=8;},
     CALLnn: function(p) {ops._CALLnn(p); p.clock.c+=24;},
-    CALLccnn:function(p, cc) {if (ops._testFlag(p, cc)){ops._CALLnn(p);p.clock.c+=12;}else{p.r.pc+=2;}p.clock.c+=12; },
+    CALLccnn:function(p, cc) {if (GameboyJS.Util.testFlag(p, cc)){ops._CALLnn(p);p.clock.c+=12;}else{p.r.pc+=2;}p.clock.c+=12; },
     _CALLnn:function(p){p.wr('sp', p.r.sp - 1); p.memory.wb(p.r.sp, ((p.r.pc+2)&0xFF00)>>8);
         p.wr('sp', p.r.sp - 1); p.memory.wb(p.r.sp, (p.r.pc+2)&0x00FF);
         var j=p.memory.rb(p.r.pc)+(p.memory.rb(p.r.pc+1)<<8);p.r.pc=j;},
@@ -589,17 +1032,8 @@ var ops = {
     EI:     function(p) {p.enableInterrupts();p.clock.c += 4;},
     RETI:   function(p) {p.enableInterrupts();ops.RET(p);},
     CB:     function(p) {var opcode = p.memory.rb(p.r.pc++);
-        if (!GameboyJS.opcodeCbmap[opcode]){console.log('CB unknown call '+opcode.toString(16));} else GameboyJS.opcodeCbmap[opcode](p);
-        p.clock.c+=4;},
-
-    // TODO the following should not be part of the ops objet
-    //      as they are just helpers for regular operations
-    _testFlag: function(p, cc) {
-        var t=1;var mask=0x10;if(cc=='NZ'||cc=='NC')t=0;if(cc=='NZ'||cc=='Z')mask=0x80;
-        return (t && p.r.F&mask) || (!t && !(p.r.F&mask));},
-    _getRegAddr: function(p, r1, r2) {return ops._makeword(p.r[r1], p.r[r2]);},
-    _makeword: function(b1, b2) {return (b1 << 8) + b2;},
-    _getSignedValue: function(v) {return v & 0x80 ? v-256 : v;}
+        GameboyJS.opcodeCbmap[opcode](p);
+        p.clock.c+=4;}
 };
 GameboyJS.cpuOps = ops;
 }(GameboyJS || (GameboyJS = {})));
@@ -697,8 +1131,9 @@ var Gameboy = function(canvas, options) {
     this.options = GameboyJS.Util.extend({}, defaultOptions, options);
 
     var cpu = new GameboyJS.CPU(this);
-    var screen = new GameboyJS.Screen(canvas, cpu);
-    cpu.screen = screen;
+    var screen = new GameboyJS.Screen(canvas);
+    var gpu = new GameboyJS.GPU(screen, cpu);
+    cpu.gpu = gpu;
 
     var pad = new this.options.padClass();
     var input = new GameboyJS.Input(cpu, pad);
@@ -914,21 +1349,6 @@ var GameboyJS;
 
 // Memory unit
 var Memory = function(cpu) {
-    // TODO addresses should be global to the class and not inside an instance
-    this.addresses = {
-        VRAM_START : 0x8000,
-        VRAM_END   : 0x9FFF,
-
-        EXTRAM_START : 0xA000,
-        EXTRAM_END   : 0xBFFF,
-
-        OAM_START : 0xFE00,
-        OAM_END   : 0xFE9F,
-
-        DEVICE_START: 0xFF00,
-        DEVICE_END:   0xFF7F
-    };
-
     this.MEM_SIZE = 65536; // 64KB
 
     this.MBCtype = 0;
@@ -938,15 +1358,29 @@ var Memory = function(cpu) {
     this.cpu = cpu;
 };
 
+Memory.addresses = {
+    VRAM_START : 0x8000,
+    VRAM_END   : 0x9FFF,
+
+    EXTRAM_START : 0xA000,
+    EXTRAM_END   : 0xBFFF,
+
+    OAM_START : 0xFE00,
+    OAM_END   : 0xFE9F,
+
+    DEVICE_START: 0xFF00,
+    DEVICE_END:   0xFF7F
+};
+
 // Memory can be accessed as an Array
 Memory.prototype = new Array();
 
 Memory.prototype.reset = function() {
     this.length = this.MEM_SIZE;
-    for (var i = this.addresses.VRAM_START; i <= this.addresses.VRAM_END; i++) {
+    for (var i = Memory.addresses.VRAM_START; i <= Memory.addresses.VRAM_END; i++) {
         this[i] = 0;
     }
-    for (var i = this.addresses.DEVICE_START; i <= this.addresses.DEVICE_END; i++) {
+    for (var i = Memory.addresses.DEVICE_START; i <= Memory.addresses.DEVICE_END; i++) {
         this[i] = 0;
     }
     this[0xFFFF] = 0;
@@ -970,7 +1404,7 @@ Memory.prototype.loadRomBank = function(index) {
 
 // Video ram accessor
 Memory.prototype.vram = function(address) {
-    if (address < this.addresses.VRAM_START || address > this.addresses.VRAM_END) {
+    if (address < Memory.addresses.VRAM_START || address > Memory.addresses.VRAM_END) {
         throw 'VRAM access in out of bounds address ' + address;
     }
 
@@ -979,7 +1413,7 @@ Memory.prototype.vram = function(address) {
 
 // OAM ram accessor
 Memory.prototype.oamram = function(address) {
-    if (address < this.addresses.OAM_START || address > this.addresses.OAM_END) {
+    if (address < Memory.addresses.OAM_START || address > Memory.addresses.OAM_END) {
         throw 'OAMRAM access in out of bounds address ' + address;
     }
 
@@ -988,7 +1422,7 @@ Memory.prototype.oamram = function(address) {
 
 // Device ram accessor
 Memory.prototype.deviceram = function(address, value) {
-    if (address < this.addresses.DEVICERAM_START || address > this.addresses.DEVICERAM_END) {
+    if (address < Memory.addresses.DEVICERAM_START || address > Memory.addresses.DEVICERAM_END) {
         throw 'Device RAM access in out of bounds address ' + address;
     }
     if (typeof value === "undefined") {
@@ -1032,6 +1466,8 @@ Memory.prototype.wb = function(addr, value) {
         this.mbc.manageWrite(addr, value);
     } else if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers
         this.cpu.apu.manageWrite(addr, value);
+    } else if (addr == 0xFF00) { // input register
+        this[addr] = ((this[addr] & 0x0F) | (value & 0x30));
     } else {
         this[addr] = value;
         if ((addr & 0xFF00) == 0xFF00) {
@@ -1054,14 +1490,10 @@ Memory.prototype.wb = function(addr, value) {
 Memory.prototype.dmaTransfer = function(startAddressPrefix) {
     var startAddress = (startAddressPrefix << 8);
     for (var i = 0; i < 0xA0; i++) {
-        this[this.addresses.OAM_START + i] = this[startAddress + i];
+        this[Memory.addresses.OAM_START + i] = this[startAddress + i];
     }
 };
 
-// Helper to extract a bit from a byte
-Memory.readBit = function(byte, index) {
-    return (byte >> index) & 1;
-};
 GameboyJS.Memory = Memory;
 }(GameboyJS || (GameboyJS = {})));
 
@@ -1709,352 +2141,6 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-// Screen device
-var Screen = function(canvas, cpu) {
-    this.cpu = cpu;
-
-    this.LCDC= 0xFF40;
-    this.STAT= 0xFF41;
-    this.SCY = 0xFF42;
-    this.SCX = 0xFF43;
-    this.LY  = 0xFF44;
-    this.LYC = 0xFF45;
-    this.BGP = 0xFF47;
-    this.OBP0= 0xFF48;
-    this.OBP1= 0xFF49;
-    this.WY  = 0xFF4A;
-    this.WX  = 0xFF4B;
-
-    this.vram = cpu.memory.vram.bind(cpu.memory);
-
-    this.OAM_START = 0xFE00;
-    this.OAM_END   = 0xFE9F;
-    this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
-    this.oamram = cpu.memory.oamram.bind(cpu.memory);
-    this.VBLANK_TIME = 70224;
-    this.clock = 0;
-    this.mode = 2;
-    this.line = 0;
-
-    canvas.width = Screen.physics.WIDTH * Screen.physics.PIXELSIZE;
-    canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
-
-    this.context = canvas.getContext('2d');
-    this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
-    this.imageData = this.context.createImageData(canvas.width, canvas.height);
-};
-
-Screen.colors = [
-    0xFF,
-    0xAA,
-    0x55,
-    0x00
-];
-
-Screen.physics = {
-    WIDTH    : 160,
-    HEIGHT   : 144,
-    PIXELSIZE: 1,
-    FREQUENCY: 60
-};
-
-Screen.tilemap = {
-    HEIGHT: 32,
-    WIDTH: 32,
-    START_0: 0x9800,
-    START_1: 0x9C00,
-    LENGTH: 0x0400 // 1024 bytes = 32*32
-};
-
-Screen.prototype.update = function(clockElapsed) {
-    this.clock += clockElapsed;
-    var vblank = false;
-
-    switch (this.mode) {
-        case 0: // HBLANK
-            if (this.clock >= 204) {
-                this.clock -= 204;
-                this.line++;
-                this.updateLY();
-                if (this.line == 144) {
-                    this.setMode(1);
-                    vblank = true;
-                    this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.VBLANK);
-                    this.drawFrame();
-                } else {
-                    this.setMode(2);
-                }
-            }
-            break;
-        case 1: // VBLANK
-            if (this.clock >= 456) {
-                this.clock -= 456;
-                this.line++;
-                if (this.line > 153) {
-                    this.line = 0;
-                    this.setMode(2);
-                }
-                this.updateLY();
-            }
-
-            break;
-        case 2: // SCANLINE OAM
-            if (this.clock >= 80) {
-                this.clock -= 80;
-                this.setMode(3);
-            }
-            break;
-        case 3: // SCANLINE VRAM
-            if (this.clock >= 172) {
-                this.clock -= 172;
-                this.setMode(0);
-            }
-            break;
-    }
-
-    return vblank;
-};
-
-Screen.prototype.updateLY = function() {
-    this.deviceram(this.LY, this.line);
-    var STAT = this.deviceram(this.STAT);
-    if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
-        this.deviceram(this.STAT, STAT | (1 << 2));
-        if (STAT & (1 << 6)) {
-            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
-        }
-    } else {
-        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
-    }
-};
-
-Screen.prototype.setMode = function(mode) {
-    this.mode = mode;
-    var newSTAT = this.deviceram(this.STAT);
-    newSTAT &= 0xFC;
-    newSTAT |= mode;
-    this.deviceram(this.STAT, newSTAT);
-
-    if (mode < 3) {
-        if (newSTAT & (1 << (3+mode))) {
-            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
-        }
-    }
-};
-
-Screen.prototype.drawFrame = function() {
-    var LCDC = this.deviceram(this.LCDC);
-    var enable = GameboyJS.Memory.readBit(LCDC, 7);
-    if (enable) {
-        this.drawBackground(LCDC);
-        this.drawSprites(LCDC);
-        this.drawWindow(LCDC);
-    }
-    this.fillImageData();
-    this.context.putImageData(this.imageData, 0, 0);
-};
-
-Screen.prototype.drawBackground = function(LCDC) {
-    if (!GameboyJS.Memory.readBit(LCDC, 0)) {
-        return;
-    }
-
-    var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Memory.readBit(LCDC, 3) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
-
-    var dataStart, signedIndex = false;
-    if (GameboyJS.Memory.readBit(LCDC, 4)) {
-        dataStart = 0x8000;
-    } else {
-        dataStart = 0x8800;
-        signedIndex = true;
-    }
-
-    var bgPalette = this.getPalette(this.deviceram(this.BGP));
-    // cache object to store read tiles from this frame
-    var cacheTile = {};
-    // browse BG tilemap
-    for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
-        var tileIndex = this.vram(i + mapStart);
-
-        if (signedIndex) {
-            tileIndex = GameboyJS.cpuOps._getSignedValue(tileIndex) + 128;
-        }
-
-        // try to retrieve the tile data from the cache, or use readTileData() to read from ram
-        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
-
-        var x = i % Screen.tilemap.WIDTH;
-        var y = (i / Screen.tilemap.WIDTH) | 0;
-        this.drawTile(tileData, x * 8, y * 8, buffer, 256);
-    }
-
-    var bgx = this.deviceram(this.SCX);
-    var bgy = this.deviceram(this.SCY);
-    for (var x = 0; x < Screen.physics.WIDTH; x++) {
-        for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            var color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
-            this.drawPixel(x, y, bgPalette[color]);
-        }
-    }
-};
-
-Screen.prototype.drawSprites = function(LCDC) {
-    if (!GameboyJS.Memory.readBit(LCDC, 1)) {
-        return;
-    }
-    var spriteWidth = GameboyJS.Memory.readBit(LCDC, 2) ? 16 : 8;
-    var spritePalettes = {};
-    spritePalettes[0] = this.getPalette(this.deviceram(this.OBP0));
-    spritePalettes[1] = this.getPalette(this.deviceram(this.OBP1));
-    var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
-    for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
-        var y = this.oamram(i);
-        var x = this.oamram(i+1);
-        var tileIndex = this.oamram(i+2);
-        var flags = this.oamram(i+3);
-
-        if (y == 0 || y >= 160 || x == 0 || x >= 168) {
-            continue;
-        }
-        var paletteNumber = GameboyJS.Memory.readBit(flags, 4);
-        var xflip = GameboyJS.Memory.readBit(flags, 5);
-        var yflip = GameboyJS.Memory.readBit(flags, 6);
-        var priority = GameboyJS.Memory.readBit(flags, 7);
-        var tileData = this.readTileData(tileIndex, 0x8000);
-
-        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
-        if (spriteWidth == 16) {
-            tileData = tileData.slice(16); // get the second tile of the sprite
-            this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
-        }
-    }
-
-    for (var x = 0; x < Screen.physics.WIDTH; x++) {
-        for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            var color = buffer[x + y * 160] | 0;
-            if (color === 0) continue;
-            if (priority === 1 && this.getPixel(x, y) !== 0) continue;
-            this.drawPixel(x, y, spritePalettes[paletteNumber][color]);
-        }
-    }
-};
-
-Screen.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
-    xflip = xflip | 0;
-    yflip = yflip | 0;
-    spriteMode = spriteMode | 0;
-    var byteIndex = 0;
-    for (var line = 0; line < 8; line++) {
-        var l = yflip ? 7 - line : line;
-        var b1 = tileData[byteIndex++];
-        var b2 = tileData[byteIndex++];
-
-        for (var pixel = 0; pixel < 8; pixel++) {
-            var mask = (1 << (7-pixel));
-            var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
-            if (spriteMode && colorValue == 0) continue;
-            var p = xflip ? 7 - pixel : pixel;
-            var bufferIndex = (x + p) + (y + l) * bufferWidth;
-            buffer[bufferIndex] = colorValue;
-        }
-    }
-};
-
-Screen.prototype.readTileData = function(tileIndex, dataStart) {
-    var tileSize  = 0x10; // 16 bytes / tile
-    var tileData = new Array();
-
-    var tileAddressStart = dataStart + (tileIndex * tileSize);
-    for (var i = tileAddressStart; i < tileAddressStart + tileSize; i++) {
-        tileData.push(this.vram(i));
-    }
-
-    return tileData;
-};
-
-Screen.prototype.drawWindow = function(LCDC) {
-    if (!GameboyJS.Memory.readBit(LCDC, 5)) {
-        return;
-    }
-
-    var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Memory.readBit(LCDC, 6) ? Screen.tilemap.START_1 : Screen.tilemap.START_0;
-
-    var dataStart, signedIndex = false;
-    if (GameboyJS.Memory.readBit(LCDC, 4)) {
-        dataStart = 0x8000;
-    } else {
-        dataStart = 0x8800;
-        signedIndex = true;
-    }
-
-    // browse Window tilemap
-    for (var i = 0; i < Screen.tilemap.LENGTH; i++) {
-        var tileIndex = this.vram(i + mapStart);
-
-        if (signedIndex) {
-            tileIndex = GameboyJS.cpuOps._getSignedValue(tileIndex) + 128;
-        }
-
-        var tileData = this.readTileData(tileIndex, dataStart);
-        var x = i % Screen.tilemap.WIDTH;
-        var y = (i / Screen.tilemap.WIDTH) | 0;
-        this.drawTile(tileData, x * 8, y * 8, buffer, 256);
-    }
-
-    var wx = this.deviceram(this.WX) - 7;
-    var wy = this.deviceram(this.WY);
-    for (var x = Math.max(0, -wx); x < Math.min(Screen.physics.WIDTH, Screen.physics.WIDTH - wx); x++) {
-        for (var y = Math.max(0, -wy); y < Math.min(Screen.physics.HEIGHT, Screen.physics.HEIGHT - wy); y++) {
-            var color = buffer[(x & 255) + (y & 255) * 256];
-            this.drawPixel(x + wx, y + wy, color);
-        }
-    }
-};
-
-// Get the palette mapping from a given palette byte as stored in memory
-// A palette will map a tile color to a final palette color index
-// used with Screen.colors to get a shade of grey
-Screen.prototype.getPalette = function(paletteByte) {
-    var palette = [];
-    for (var i = 0; i < 8; i += 2) {
-        var shade = (paletteByte & (3 << i)) >> i;
-        palette.push(shade);
-    }
-    return palette;
-};
-
-Screen.prototype.clearScreen = function() {
-    this.context.fillStyle = '#FFF';
-    this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
-};
-Screen.prototype.getPixel = function(x, y) {
-    return this.buffer[y * 160 + x];
-};
-Screen.prototype.drawPixel = function(x, y, color) {
-    this.buffer[y * 160 + x] = color;
-};
-Screen.prototype.fillImageData = function() {
-    for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-        for (var x = 0; x < Screen.physics.WIDTH; x++) {
-            var offset = y * 160 + x;
-            var v = Screen.colors[this.buffer[offset]];
-            this.imageData.data[offset * 4] = v;
-            this.imageData.data[offset * 4 + 1] = v;
-            this.imageData.data[offset * 4 + 2] = v;
-            this.imageData.data[offset * 4 + 3] = 255;
-        }
-    }
-};
-
-GameboyJS.Screen = Screen;
-}(GameboyJS || (GameboyJS = {})));
-
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // Handlers for the Serial port of the Gameboy
 
 // The ConsoleSerial is an output-only serial port
@@ -2643,19 +2729,39 @@ var GameboyJS;
 "use strict";
 
 // Utility functions
-var Util = {};
-
-// Add to the first argument the properties of all other arguments
-Util.extend = function(target /*, source1, source2, etc. */) {
-    var sources = Array.prototype.slice.call(arguments);
-    for (var i in sources) {
-        var source = sources[i];
-        for (var name in source) {
-            target[name] = source[name];
+var Util = {
+    // Add to the first argument the properties of all other arguments
+    extend: function(target /*, source1, source2, etc. */) {
+        var sources = Array.prototype.slice.call(arguments);
+        for (var i in sources) {
+            var source = sources[i];
+            for (var name in source) {
+                target[name] = source[name];
+            }
         }
-    }
 
-    return target;
+        return target;
+    },
+    testFlag: function(p, cc) {
+        var test=1;
+        var mask=0x10;
+        if (cc=='NZ'||cc=='NC') test=0;
+        if (cc=='NZ'||cc=='Z')  mask=0x80;
+        return (test && p.r.F&mask) || (!test && !(p.r.F&mask));
+    },
+    getRegAddr: function(p, r1, r2) {return Util.makeword(p.r[r1], p.r[r2]);},
+
+    // make a 16 bits word from 2 bytes
+    makeword: function(b1, b2) {return (b1 << 8) + b2;},
+
+    // return the integer signed value of a given byte
+    getSignedValue: function(v) {return v & 0x80 ? v-256 : v;},
+
+    // extract a bit from a byte
+    readBit: function(byte, index) {
+        return (byte >> index) & 1;
+    }
 };
+
 GameboyJS.Util = Util;
 }(GameboyJS || (GameboyJS = {})));

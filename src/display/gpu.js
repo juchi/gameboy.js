@@ -31,6 +31,7 @@ var GPU = function(screen, cpu) {
 
     Screen = GameboyJS.Screen;
     this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
+    this.tileBuffer = new Array(8);
 };
 
 GPU.tilemap = {
@@ -82,6 +83,7 @@ GPU.prototype.update = function(clockElapsed) {
         case 3: // SCANLINE VRAM
             if (this.clock >= 172) {
                 this.clock -= 172;
+                this.drawScanLine(this.line);
                 this.setMode(0);
             }
             break;
@@ -117,23 +119,29 @@ GPU.prototype.setMode = function(mode) {
     }
 };
 
+// Push one scanline into the main buffer
+GPU.prototype.drawScanLine = function(line) {
+    var LCDC = this.deviceram(this.LCDC);
+    this.drawBackground(LCDC, line);
+    // TODO draw a line for sprites and window here too
+};
+
 GPU.prototype.drawFrame = function() {
     var LCDC = this.deviceram(this.LCDC);
     var enable = GameboyJS.Util.readBit(LCDC, 7);
     if (enable) {
-        this.drawBackground(LCDC);
         this.drawSprites(LCDC);
         this.drawWindow(LCDC);
     }
     this.screen.render(this.buffer);
 };
 
-GPU.prototype.drawBackground = function(LCDC) {
+GPU.prototype.drawBackground = function(LCDC, line) {
     if (!GameboyJS.Util.readBit(LCDC, 0)) {
         return;
     }
 
-    var buffer = new Array(256*256);
+    var lineBuffer = new Array(Screen.physics.WIDTH);
     var mapStart = GameboyJS.Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
@@ -144,11 +152,22 @@ GPU.prototype.drawBackground = function(LCDC) {
         signedIndex = true;
     }
 
-    var bgPalette = GPU.getPalette(this.deviceram(this.BGP));
+    var bgx = this.deviceram(this.SCX);
+    var bgy = this.deviceram(this.SCY);
+    var tileLine = (line + bgy) % 8;
+
     // cache object to store read tiles from this frame
     var cacheTile = {};
-    // browse BG tilemap
-    for (var i = 0; i < GPU.tilemap.LENGTH; i++) {
+
+    // browse BG tilemap for the line to render
+    var tileRow = (((bgy + line) / 8) | 0) % 32;
+    var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
+    var lastTile = firstTile + Screen.physics.WIDTH / 8 + 1;
+    if (lastTile % 32 < firstTile % 32) {
+        lastTile -= 32;
+    }
+    var x = (firstTile % 32) * 8 - bgx; // x position of the first tile's leftmost pixel
+    for (var i = firstTile; i != lastTile; i++, i%32 == 0 ? i-=32 : null) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
@@ -156,20 +175,51 @@ GPU.prototype.drawBackground = function(LCDC) {
         }
 
         // try to retrieve the tile data from the cache, or use readTileData() to read from ram
+        // TODO find a better cache system now that the BG is rendered line by line
         var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
 
-        var x = i % GPU.tilemap.WIDTH;
-        var y = (i / GPU.tilemap.WIDTH) | 0;
-        this.drawTile(tileData, x * 8, y * 8, buffer, 256);
+        this.drawTileLine(tileData, tileLine);
+        this.copyTileLine(lineBuffer, this.tileBuffer, x);
+        x += 8;
     }
 
-    var bgx = this.deviceram(this.SCX);
-    var bgy = this.deviceram(this.SCY);
+    var bgPalette = GPU.getPalette(this.deviceram(this.BGP));
+    this.copyLineToBuffer(lineBuffer, line, bgPalette);
+};
+
+// Copy a tile line from a tileBuffer to a line buffer, at a given x position
+GPU.prototype.copyTileLine = function(lineBuffer, tileBuffer, x) {
+    // copy tile line to buffer
+    for (var k = 0; k < 8; k++, x++) {
+        if (x < 0 || x > Screen.physics.WIDTH) continue;
+        lineBuffer[x] = tileBuffer[k];
+    }
+};
+
+// Copy a scanline into the main buffer
+GPU.prototype.copyLineToBuffer = function(lineData, line, palette) {
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
-        for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            var color = buffer[((x+bgx) & 255) + ((y+bgy) & 255) * 256];
-            this.drawPixel(x, y, bgPalette[color]);
-        }
+        var color = lineData[x];
+        this.drawPixel(x, line, palette[color]);
+    }
+};
+
+// Write a line of a tile (8 pixels) into a buffer array
+GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip, spriteMode) {
+    xflip = xflip | 0;
+    yflip = yflip | 0;
+    spriteMode = spriteMode | 0;
+    var byteIndex = line * 2;
+    var l = yflip ? 7 - line : line;
+    var b1 = tileData[byteIndex++];
+    var b2 = tileData[byteIndex++];
+
+    for (var pixel = 0; pixel < 8; pixel++) {
+        var mask = (1 << (7-pixel));
+        var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+        if (spriteMode && colorValue == 0) continue;
+        var p = xflip ? 7 - pixel : pixel;
+        this.tileBuffer[p] = colorValue;
     }
 };
 
@@ -181,6 +231,10 @@ GPU.prototype.drawSprites = function(LCDC) {
     var spritePalettes = {};
     spritePalettes[0] = GPU.getPalette(this.deviceram(this.OBP0));
     spritePalettes[1] = GPU.getPalette(this.deviceram(this.OBP1));
+
+    // cache object to store read tiles from this frame
+    var cacheTile = {};
+
     var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
         var y = this.oamram(i);
@@ -195,7 +249,7 @@ GPU.prototype.drawSprites = function(LCDC) {
         var xflip = GameboyJS.Util.readBit(flags, 5);
         var yflip = GameboyJS.Util.readBit(flags, 6);
         var priority = GameboyJS.Util.readBit(flags, 7);
-        var tileData = this.readTileData(tileIndex, 0x8000, spriteHeight * 2);
+        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, 0x8000, spriteHeight * 2));
 
         this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
         if (spriteHeight == 16) {
@@ -235,6 +289,7 @@ GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yf
     }
 };
 
+// get an array of tile bytes data (16 entries for 8*8px)
 GPU.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
     tileSize = tileSize || 0x10; // 16 bytes / tile by default (8*8 px)
     var tileData = new Array();

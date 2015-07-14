@@ -122,26 +122,30 @@ GPU.prototype.setMode = function(mode) {
 // Push one scanline into the main buffer
 GPU.prototype.drawScanLine = function(line) {
     var LCDC = this.deviceram(this.LCDC);
-    this.drawBackground(LCDC, line);
-    // TODO draw a line for sprites and window here too
+    var enable = GameboyJS.Util.readBit(LCDC, 7);
+    if (enable) {
+        var lineBuffer = new Array(Screen.physics.WIDTH);
+        this.drawBackground(LCDC, line, lineBuffer);
+        this.drawSprites(LCDC, line, lineBuffer);
+        // TODO draw a line for the window here too
+    }
 };
 
 GPU.prototype.drawFrame = function() {
     var LCDC = this.deviceram(this.LCDC);
     var enable = GameboyJS.Util.readBit(LCDC, 7);
     if (enable) {
-        this.drawSprites(LCDC);
+        //this.drawSprites(LCDC);
         this.drawWindow(LCDC);
     }
     this.screen.render(this.buffer);
 };
 
-GPU.prototype.drawBackground = function(LCDC, line) {
+GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
     if (!GameboyJS.Util.readBit(LCDC, 0)) {
         return;
     }
 
-    var lineBuffer = new Array(Screen.physics.WIDTH);
     var mapStart = GameboyJS.Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
@@ -179,51 +183,62 @@ GPU.prototype.drawBackground = function(LCDC, line) {
         var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
 
         this.drawTileLine(tileData, tileLine);
-        this.copyTileLine(lineBuffer, this.tileBuffer, x);
+        this.copyBGTileLine(lineBuffer, this.tileBuffer, x);
         x += 8;
     }
 
     var bgPalette = GPU.getPalette(this.deviceram(this.BGP));
-    this.copyLineToBuffer(lineBuffer, line, bgPalette);
+
+    for (var x = 0; x < Screen.physics.WIDTH; x++) {
+        var color = lineBuffer[x];
+        this.drawPixel(x, line, bgPalette[color]);
+    }
 };
 
 // Copy a tile line from a tileBuffer to a line buffer, at a given x position
-GPU.prototype.copyTileLine = function(lineBuffer, tileBuffer, x) {
+GPU.prototype.copyBGTileLine = function(lineBuffer, tileBuffer, x) {
     // copy tile line to buffer
     for (var k = 0; k < 8; k++, x++) {
-        if (x < 0 || x > Screen.physics.WIDTH) continue;
+        if (x < 0 || x >= Screen.physics.WIDTH) continue;
         lineBuffer[x] = tileBuffer[k];
     }
 };
 
+// Copy a tile line from a tileBuffer to a line buffer, at a given x position
+GPU.prototype.copySpriteTileLine = function(lineBuffer, tileBuffer, x, palette) {
+    // copy tile line to buffer
+    for (var k = 0; k < 8; k++, x++) {
+        if (x < 0 || x >= Screen.physics.WIDTH || tileBuffer[k] == 0) continue;
+        lineBuffer[x] = {color:tileBuffer[k], palette: palette};
+    }
+};
+
 // Copy a scanline into the main buffer
-GPU.prototype.copyLineToBuffer = function(lineData, line, palette) {
+GPU.prototype.copyLineToBuffer = function(lineData, line, palettes) {
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
-        var color = lineData[x];
-        this.drawPixel(x, line, palette[color]);
+        var color = palettes[lineData[x].palette][lineData[x].color];
+        this.drawPixel(x, line, color);
     }
 };
 
 // Write a line of a tile (8 pixels) into a buffer array
-GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip, spriteMode) {
+GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip) {
     xflip = xflip | 0;
     yflip = yflip | 0;
-    spriteMode = spriteMode | 0;
-    var byteIndex = line * 2;
     var l = yflip ? 7 - line : line;
+    var byteIndex = l * 2;
     var b1 = tileData[byteIndex++];
     var b2 = tileData[byteIndex++];
 
     for (var pixel = 0; pixel < 8; pixel++) {
         var mask = (1 << (7-pixel));
         var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
-        if (spriteMode && colorValue == 0) continue;
         var p = xflip ? 7 - pixel : pixel;
         this.tileBuffer[p] = colorValue;
     }
 };
 
-GPU.prototype.drawSprites = function(LCDC) {
+GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
     if (!GameboyJS.Util.readBit(LCDC, 1)) {
         return;
     }
@@ -235,36 +250,38 @@ GPU.prototype.drawSprites = function(LCDC) {
     // cache object to store read tiles from this frame
     var cacheTile = {};
 
-    var buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
-    for (var i = this.OAM_START; i < this.OAM_END; i += 4) {
+    var spriteLineBuffer = new Array(Screen.physics.WIDTH);
+
+    var sprites = new Array();
+    for (var i = this.OAM_START; i < this.OAM_END && sprites.length < 10; i += 4) {
         var y = this.oamram(i);
         var x = this.oamram(i+1);
-        var tileIndex = this.oamram(i+2);
+        var index = this.oamram(i+2);
         var flags = this.oamram(i+3);
 
-        if (y == 0 || y >= 160 || x == 0 || x >= 168) {
+        if (y <= 0 || y >= 160 || y - 16 > line || y - 16 < line - spriteHeight) {
             continue;
         }
-        var paletteNumber = GameboyJS.Util.readBit(flags, 4);
-        var xflip = GameboyJS.Util.readBit(flags, 5);
-        var yflip = GameboyJS.Util.readBit(flags, 6);
-        var priority = GameboyJS.Util.readBit(flags, 7);
-        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, 0x8000, spriteHeight * 2));
+        sprites.push({x:x, y:y, index:index, flags:flags})
+    }
 
-        this.drawTile(tileData, x - 8, y - 16, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
-        if (spriteHeight == 16) {
-            tileData = tileData.slice(16); // get the second tile of the sprite
-            this.drawTile(tileData, x - 8, y - 8, buffer, Screen.physics.WIDTH, xflip, yflip, 1);
-        }
+    for (var i = 0; i < sprites.length; i++) {
+        var sprite = sprites[i];
+        var tileLine = line - sprite.y + 16;
+        var paletteNumber = GameboyJS.Util.readBit(flags, 4);
+        var xflip = GameboyJS.Util.readBit(sprite.flags, 5);
+        var yflip = GameboyJS.Util.readBit(sprite.flags, 6);
+        var tileData = cacheTile[sprite.index] || (cacheTile[sprite.index] = this.readTileData(sprite.index, 0x8000, spriteHeight * 2));
+        this.drawTileLine(tileData, tileLine, xflip, yflip);
+        this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber);
     }
 
     for (var x = 0; x < Screen.physics.WIDTH; x++) {
-        for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-            var color = buffer[x + y * 160] | 0;
-            if (color === 0) continue;
-            if (priority === 1 && this.getPixel(x, y) !== 0) continue;
-            this.drawPixel(x, y, spritePalettes[paletteNumber][color]);
-        }
+        if (spriteLineBuffer[x] === undefined) continue;
+        var color = spriteLineBuffer[x].color;
+        if (color === 0) continue;
+        var paletteNumber = spriteLineBuffer[x].palette;
+        this.drawPixel(x, line, spritePalettes[paletteNumber][color]);
     }
 };
 

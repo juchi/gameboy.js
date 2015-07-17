@@ -32,6 +32,7 @@ var GPU = function(screen, cpu) {
     Screen = GameboyJS.Screen;
     this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     this.tileBuffer = new Array(8);
+    this.bgTileCache = {};
 };
 
 GPU.tilemap = {
@@ -138,6 +139,7 @@ GPU.prototype.drawFrame = function() {
         //this.drawSprites(LCDC);
         this.drawWindow(LCDC);
     }
+    this.bgTileCache = {};
     this.screen.render(this.buffer);
 };
 
@@ -160,9 +162,6 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
     var bgy = this.deviceram(this.SCY);
     var tileLine = ((line + bgy) & 7);
 
-    // cache object to store read tiles from this frame
-    var cacheTile = {};
-
     // browse BG tilemap for the line to render
     var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
     var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
@@ -180,7 +179,7 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
 
         // try to retrieve the tile data from the cache, or use readTileData() to read from ram
         // TODO find a better cache system now that the BG is rendered line by line
-        var tileData = cacheTile[tileIndex] || (cacheTile[tileIndex] = this.readTileData(tileIndex, dataStart));
+        var tileData = this.bgTileCache[tileIndex] || (this.bgTileCache[tileIndex] = this.readTileData(tileIndex, dataStart));
 
         this.drawTileLine(tileData, tileLine);
         this.copyBGTileLine(lineBuffer, this.tileBuffer, x);

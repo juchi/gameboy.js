@@ -158,20 +158,20 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
 
     var bgx = this.deviceram(this.SCX);
     var bgy = this.deviceram(this.SCY);
-    var tileLine = (line + bgy) % 8;
+    var tileLine = ((line + bgy) & 7);
 
     // cache object to store read tiles from this frame
     var cacheTile = {};
 
     // browse BG tilemap for the line to render
-    var tileRow = (((bgy + line) / 8) | 0) % 32;
+    var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
     var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
     var lastTile = firstTile + Screen.physics.WIDTH / 8 + 1;
-    if (lastTile % 32 < firstTile % 32) {
+    if ((lastTile & 0x1F) < (firstTile & 0x1F)) {
         lastTile -= 32;
     }
-    var x = (firstTile % 32) * 8 - bgx; // x position of the first tile's leftmost pixel
-    for (var i = firstTile; i != lastTile; i++, i%32 == 0 ? i-=32 : null) {
+    var x = (firstTile & 0x1F) * 8 - bgx; // x position of the first tile's leftmost pixel
+    for (var i = firstTile; i != lastTile; i++, (i & 0x1F) == 0 ? i-=32 : null) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
@@ -218,10 +218,12 @@ GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip) {
     var b1 = tileData[byteIndex++];
     var b2 = tileData[byteIndex++];
 
+    var offset = 8;
     for (var pixel = 0; pixel < 8; pixel++) {
-        var mask = (1 << (7-pixel));
-        var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
-        var p = xflip ? 7 - pixel : pixel;
+        offset--;
+        var mask = (1 << offset);
+        var colorValue = ((b1 & mask) >> offset) + ((b2 & mask) >> offset)*2;
+        var p = xflip ? offset : pixel;
         this.tileBuffer[p] = colorValue;
     }
 };

@@ -44,9 +44,12 @@ var options, canvas;
 new GameboyJS.Gameboy(canvas, options);
 ```
 
-* padClass: The JS class to use as a physical gamepad.
+* pad: Object representing the pad to use as a physical gamepad. The `class` key is mandatory and
+  should contain the class implementing the device you want to play with.
   You can implement any kind of pad as long as this class implements the init() method.
-  See GameboyJS.Keyboard class for an example of implementation. Default is GameboyJS.Keyboard
+  See GameboyJS.Keyboard class for an example of implementation. You may also provide
+  a `mapping` object that will be used if you choose the GameboyJS.Gamepad class.
+  Default is `{class: GameboyJS.Keyboard, mapping: null}`
 * statusContainerId: The ID of the HTML element for status display. Default is 'status'
 * gameNameContainerId: The ID of the HTML element for game name display. Default is 'game-name'
 * errorContainerId: The ID of the HTML element for error display. Default is 'error'

@@ -3,7 +3,7 @@ var GameboyJS;
 "use strict";
 
 var defaultOptions = {
-    padClass: GameboyJS.Keyboard,
+    pad: {class: GameboyJS.Keyboard, mapping: null},
     statusContainerId: 'status',
     gameNameContainerId: 'game-name',
     errorContainerId: 'error'
@@ -23,7 +23,7 @@ var Gameboy = function(canvas, options) {
     var gpu = new GameboyJS.GPU(screen, cpu);
     cpu.gpu = gpu;
 
-    var pad = new this.options.padClass();
+    var pad = new this.options.pad.class(this.options.pad.mapping);
     var input = new GameboyJS.Input(cpu, pad);
     cpu.input = input;
 

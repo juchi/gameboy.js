@@ -699,12 +699,11 @@ var GameboyJS;
 "use strict";
 
 // Screen device
-var Screen = function(canvas) {
-    canvas.width = Screen.physics.WIDTH * Screen.physics.PIXELSIZE;
-    canvas.height = Screen.physics.HEIGHT * Screen.physics.PIXELSIZE;
-
+var Screen = function(canvas, pixelSize) {
     this.context = canvas.getContext('2d');
-    this.imageData = this.context.createImageData(canvas.width, canvas.height);
+    this.canvas = canvas;
+    this.pixelSize = pixelSize || 1;
+    this.initImageData();
 };
 
 Screen.colors = [
@@ -717,24 +716,39 @@ Screen.colors = [
 Screen.physics = {
     WIDTH    : 160,
     HEIGHT   : 144,
-    PIXELSIZE: 1,
     FREQUENCY: 60
+};
+
+Screen.prototype.setPixelSize = function(pixelSize) {
+    this.pixelSize = pixelSize;
+    this.initImageData();
+};
+
+Screen.prototype.initImageData = function() {
+    this.canvas.width = Screen.physics.WIDTH * this.pixelSize;
+    this.canvas.height = Screen.physics.HEIGHT * this.pixelSize;
+    this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
 };
 
 Screen.prototype.clearScreen = function() {
     this.context.fillStyle = '#FFF';
-    this.context.fillRect(0, 0, Screen.physics.WIDTH * Screen.physics.PIXELSIZE, Screen.physics.HEIGHT * Screen.physics.PIXELSIZE);
+    this.context.fillRect(0, 0, Screen.physics.WIDTH * this.pixelSize, Screen.physics.HEIGHT * this.pixelSize);
 };
 
 Screen.prototype.fillImageData = function(buffer) {
     for (var y = 0; y < Screen.physics.HEIGHT; y++) {
-        for (var x = 0; x < Screen.physics.WIDTH; x++) {
-            var offset = y * 160 + x;
-            var v = Screen.colors[buffer[offset]];
-            this.imageData.data[offset * 4] = v;
-            this.imageData.data[offset * 4 + 1] = v;
-            this.imageData.data[offset * 4 + 2] = v;
-            this.imageData.data[offset * 4 + 3] = 255;
+        for (var py = 0; py < this.pixelSize; py++) {
+            var _y = y * this.pixelSize + py;
+            for (var x = 0; x < Screen.physics.WIDTH; x++) {
+                for (var px = 0; px < this.pixelSize; px++) {
+                    var offset = _y * this.canvas.width + (x * this.pixelSize + px);
+                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x]];
+                    this.imageData.data[offset * 4] = v;
+                    this.imageData.data[offset * 4 + 1] = v;
+                    this.imageData.data[offset * 4 + 2] = v;
+                    this.imageData.data[offset * 4 + 3] = 255;
+                }
+            }
         }
     }
 };
@@ -742,7 +756,7 @@ Screen.prototype.fillImageData = function(buffer) {
 Screen.prototype.render = function(buffer) {
     this.fillImageData(buffer);
     this.context.putImageData(this.imageData, 0, 0);
-}
+};
 
 GameboyJS.Screen = Screen;
 }(GameboyJS || (GameboyJS = {})));
@@ -819,6 +833,90 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
+// This is the default buttons mapping for the Gamepad
+// It's optimized for the XBOX pad
+//
+// Any other mapping can be provided as a constructor argument of the Gamepad object
+// An alternative mapping should be an object with keys being the indexes
+// of the gamepad buttons and values the normalized gameboy button names
+var xboxMapping = {
+    0: 'UP',
+    1: 'DOWN',
+    2: 'LEFT',
+    3: 'RIGHT',
+    4: 'START',
+    5: 'SELECT',
+    11: 'A',
+    12: 'B'
+};
+
+// Gamepad listener
+// Communication layer between the Gamepad API and the Input class
+// Any physical controller can be used but the mapping should be provided
+// in order to get an optimal layout of the buttons (see above)
+var Gamepad = function(mapping) {
+    this.gamepad = null;
+    this.state = {A:0,B:0,START:0,SELECT:0,LEFT:0,RIGHT:0,UP:0,DOWN:0};
+    this.pullInterval = null;
+    this.buttonMapping = mapping || xboxMapping;
+};
+
+// Initialize the keyboard listeners and set up the callbacks
+// for button press / release
+Gamepad.prototype.init = function(onPress, onRelease) {
+    this.onPress = onPress;
+    this.onRelease = onRelease;
+
+    var self = this;
+    window.addEventListener('gamepadconnected', function(e) {
+        self.gamepad = e.gamepad;
+        self.activatePull();
+    });
+    window.addEventListener('gamepaddisconnected', function(e) {
+        self.gamepad = null;
+        self.deactivatePull();
+    });
+};
+
+Gamepad.prototype.activatePull = function() {
+    this.deactivatePull();
+    this.pullInterval = setInterval(this.pullState.bind(this), 100);
+};
+
+Gamepad.prototype.deactivatePull = function() {
+    clearInterval(this.pullInterval);
+};
+
+// Check the state of the current gamepad in order to detect any press/release action
+Gamepad.prototype.pullState = function() {
+    for (var index in this.buttonMapping) {
+        var button = this.buttonMapping[index];
+        var oldState = this.state[button];
+        this.state[button] = this.gamepad.buttons[index].pressed;
+
+        if (this.state[button] == 1 && oldState == 0) {
+            this.managePress(button);
+        } else if (this.state[button] == 0 && oldState == 1) {
+            this.manageRelease(button);
+        }
+    }
+};
+
+Gamepad.prototype.managePress = function(key) {
+    this.onPress(key);
+};
+
+Gamepad.prototype.manageRelease = function(key) {
+    this.onRelease(key);
+};
+
+GameboyJS.Gamepad = Gamepad;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+
 // The Input management system
 //
 // The pressKey() and releaseKey() functions should be called by a device class
@@ -871,6 +969,78 @@ Input.prototype.update = function() {
     this.memory[this.P1] = value;
 };
 GameboyJS.Input = Input;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+
+// Keyboard listener
+// Does the mapping between the keyboard and the Input class
+var Keyboard = function() {};
+
+// Initialize the keyboard listeners and set up the callbacks
+// for button press / release
+Keyboard.prototype.init = function(onPress, onRelease) {
+    this.onPress = onPress;
+    this.onRelease = onRelease;
+
+    var self = this;
+    document.addEventListener('keydown', function(e) {
+        self.managePress(e.keyCode);
+    });
+    document.addEventListener('keyup', function(e) {
+        self.manageRelease(e.keyCode);
+    });
+}
+
+Keyboard.prototype.managePress = function(keycode) {
+    var key = this.translateKey(keycode);
+    if (key) {
+        this.onPress(key);
+    }
+};
+
+Keyboard.prototype.manageRelease = function(keycode) {
+    var key = this.translateKey(keycode);
+    if (key) {
+        this.onRelease(key);
+    }
+};
+
+// Transform a keyboard keycode into a key of the Input.keys object
+Keyboard.prototype.translateKey = function(keycode) {
+    var key = null;
+    switch (keycode) {
+        case 71: // G
+            key = 'A';
+            break;
+        case 66: // B
+            key = 'B';
+            break;
+        case 72: // H
+            key = 'START';
+            break;
+        case 78: // N
+            key = 'SELECT';
+            break;
+        case 37: // left
+            key = 'LEFT';
+            break;
+        case 38: // up
+            key = 'UP';
+            break;
+        case 39: // right
+            key = 'RIGHT';
+            break;
+        case 40: // down
+            key = 'DOWN';
+            break;
+    }
+
+    return key;
+};
+GameboyJS.Keyboard = Keyboard;
 }(GameboyJS || (GameboyJS = {})));
 
 var GameboyJS;
@@ -1064,80 +1234,9 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-// Keyboard listener
-// Does the mapping between the keyboard and the Input class
-var Keyboard = function() {};
-
-// Initialize the keyboard listeners and set up the callbacks
-// for button press / release
-Keyboard.prototype.init = function(onPress, onRelease) {
-    this.onPress = onPress;
-    this.onRelease = onRelease;
-
-    var self = this;
-    document.addEventListener('keydown', function(e) {
-        self.managePress(e.keyCode);
-    });
-    document.addEventListener('keyup', function(e) {
-        self.manageRelease(e.keyCode);
-    });
-}
-
-Keyboard.prototype.managePress = function(keycode) {
-    var key = this.translateKey(keycode);
-    if (key) {
-        this.onPress(key);
-    }
-};
-
-Keyboard.prototype.manageRelease = function(keycode) {
-    var key = this.translateKey(keycode);
-    if (key) {
-        this.onRelease(key);
-    }
-};
-
-// Transform a keyboard keycode into a key of the Input.keys object
-Keyboard.prototype.translateKey = function(keycode) {
-    var key = null;
-    switch (keycode) {
-        case 71: // G
-            key = 'A';
-            break;
-        case 66: // B
-            key = 'B';
-            break;
-        case 72: // H
-            key = 'START';
-            break;
-        case 78: // N
-            key = 'SELECT';
-            break;
-        case 37: // left
-            key = 'LEFT';
-            break;
-        case 38: // up
-            key = 'UP';
-            break;
-        case 39: // right
-            key = 'RIGHT';
-            break;
-        case 40: // down
-            key = 'DOWN';
-            break;
-    }
-
-    return key;
-};
-GameboyJS.Keyboard = Keyboard;
-}(GameboyJS || (GameboyJS = {})));
-
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 var defaultOptions = {
-    padClass: GameboyJS.Keyboard,
+    pad: {class: GameboyJS.Keyboard, mapping: null},
+    zoom: 1,
     statusContainerId: 'status',
     gameNameContainerId: 'game-name',
     errorContainerId: 'error'
@@ -1153,11 +1252,11 @@ var Gameboy = function(canvas, options) {
     this.options = GameboyJS.Util.extend({}, defaultOptions, options);
 
     var cpu = new GameboyJS.CPU(this);
-    var screen = new GameboyJS.Screen(canvas);
+    var screen = new GameboyJS.Screen(canvas, this.options.zoom);
     var gpu = new GameboyJS.GPU(screen, cpu);
     cpu.gpu = gpu;
 
-    var pad = new this.options.padClass();
+    var pad = new this.options.pad.class(this.options.pad.mapping);
     var input = new GameboyJS.Input(cpu, pad);
     cpu.input = input;
 
@@ -1222,7 +1321,9 @@ Gameboy.prototype.setSoundEnabled = function(value) {
         this.cpu.apu.disconnect();
     }
 };
-
+Gameboy.prototype.setScreenZoom = function(value) {
+    this.screen.setPixelSize(value);
+};
 Gameboy.prototype.handleException = function(e) {
     if (e instanceof GameboyJS.UnimplementedException) {
         if (e.fatal) {

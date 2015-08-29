@@ -17,7 +17,6 @@ Tested on:
 ### Run now
 
 You can try the emulator directly on the [demo site](http://juchi.github.io/gameboy.js/).
-Alternatively, clone the project and run `index.html` in a web browser, no additional dependencies are required.
 
 Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but some tests fail.
 See the Tests section for more details.

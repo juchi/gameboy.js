@@ -50,6 +50,7 @@ new GameboyJS.Gameboy(canvas, options);
   See GameboyJS.Keyboard class for an example of implementation. You may also provide
   a `mapping` object that will be used if you choose the GameboyJS.Gamepad class.
   Default is `{class: GameboyJS.Keyboard, mapping: null}`
+* zoom: The zoom level as an integer. Default is 1
 * statusContainerId: The ID of the HTML element for status display. Default is 'status'
 * gameNameContainerId: The ID of the HTML element for game name display. Default is 'game-name'
 * errorContainerId: The ID of the HTML element for error display. Default is 'error'

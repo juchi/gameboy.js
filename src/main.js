@@ -4,6 +4,7 @@ var GameboyJS;
 
 var defaultOptions = {
     pad: {class: GameboyJS.Keyboard, mapping: null},
+    zoom: 1,
     statusContainerId: 'status',
     gameNameContainerId: 'game-name',
     errorContainerId: 'error'
@@ -19,7 +20,7 @@ var Gameboy = function(canvas, options) {
     this.options = GameboyJS.Util.extend({}, defaultOptions, options);
 
     var cpu = new GameboyJS.CPU(this);
-    var screen = new GameboyJS.Screen(canvas);
+    var screen = new GameboyJS.Screen(canvas, this.options.zoom);
     var gpu = new GameboyJS.GPU(screen, cpu);
     cpu.gpu = gpu;
 
@@ -88,7 +89,9 @@ Gameboy.prototype.setSoundEnabled = function(value) {
         this.cpu.apu.disconnect();
     }
 };
-
+Gameboy.prototype.setScreenZoom = function(value) {
+    this.screen.setPixelSize(value);
+};
 Gameboy.prototype.handleException = function(e) {
     if (e instanceof GameboyJS.UnimplementedException) {
         if (e.fatal) {

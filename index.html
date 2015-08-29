@@ -22,6 +22,16 @@
 <p class="commands">
     <label><input id="sound-enable" type="checkbox" onchange="g.setSoundEnabled(this.checked);"/> Enable sound (experimental)</label>
 </p>
+<p class="commands">
+    <label>
+        Screen zoom
+        <select id="screen-zoom" onchange="g.setScreenZoom(this.value);">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+        </select>
+    </label>
+</p>
 
 <p>
     <span id="status"></span> <span id="game-name"></span>
@@ -57,6 +67,7 @@
 <script>
 var g = new GameboyJS.Gameboy(document.getElementById('canvas'));
 g.setSoundEnabled(document.getElementById('sound-enable').checked);
+g.setScreenZoom(document.getElementById('screen-zoom').value);
 </script>
 
 <script>

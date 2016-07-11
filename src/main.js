@@ -5,6 +5,7 @@ var GameboyJS;
 var defaultOptions = {
     pad: {class: GameboyJS.Keyboard, mapping: null},
     zoom: 1,
+    romReaders: [],
     statusContainerId: 'status',
     gameNameContainerId: 'game-name',
     errorContainerId: 'error'
@@ -33,12 +34,27 @@ var Gameboy = function(canvas, options) {
     this.input = input;
     this.pad = pad;
 
-    var romReader = new GameboyJS.RomFileReader();
-    var rom = new GameboyJS.Rom(this, romReader);
+    this.createRom(this.options.romReaders);
 
     this.statusContainer   = document.getElementById(this.options.statusContainerId) || document.createElement('div');
     this.gameNameContainer = document.getElementById(this.options.gameNameContainerId) || document.createElement('div');
     this.errorContainer    = document.getElementById(this.options.errorContainerId) || document.createElement('div');
+};
+
+// Create the ROM object and bind one or more readers
+Gameboy.prototype.createRom = function (readers) {
+    var rom = new GameboyJS.Rom(this);
+    if (readers.length == 0) {
+        // add the default rom reader
+        var romReader = new GameboyJS.RomFileReader();
+        rom.addReader(romReader);
+    } else {
+        for (var i in readers) {
+            if (readers.hasOwnProperty(i)) {
+                rom.addReader(readers[i]);
+            }
+        }
+    }
 };
 
 Gameboy.prototype.startRom = function(rom) {

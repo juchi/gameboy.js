@@ -4,28 +4,22 @@ var GameboyJS;
 
 
 var Rom = function(gameboy, romReader) {
-    var data = [];
+    this.gameboy = gameboy;
+    if (romReader) {
+        this.addReader(romReader);
+    }
+};
+
+Rom.prototype.addReader = function(romReader) {
     var self = this;
-    romReader.init(function(data) {
+    romReader.setCallback(function(data) {
         if (!validate(data)) {
-            gameboy.error('The file is not a valid GameBoy ROM.');
+            self.gameboy.error('The file is not a valid GameBoy ROM.');
             return;
         }
         self.data = data;
-        gameboy.startRom(self);
+        self.gameboy.startRom(self);
     });
-};
-
-Rom.prototype.requestFile = function(filename, cb) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', filename, true);
-    xhr.responseType = "arraybuffer";
-    xhr.onload = function() {
-        var rom = new Uint8Array(xhr.response);
-        cb(rom);
-    };
-
-    xhr.send();
 };
 
 // Validate the checksum of the cartridge header

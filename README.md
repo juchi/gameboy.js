@@ -21,7 +21,8 @@ You can try the emulator directly on the [demo site](http://juchi.github.io/game
 Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but some tests fail.
 See the Tests section for more details.
 
-Currently, some games are runnable (tested with Tetris, Super Mario, Pokemon Red) but will probably have glitches.
+Currently, most tested games run (tested with Tetris, Super Mario, Pokemon Red)
+but have some glitches.
 
 ### Run on a custom page
 
@@ -43,16 +44,19 @@ var options, canvas;
 new GameboyJS.Gameboy(canvas, options);
 ```
 
-* pad: Object representing the pad to use as a physical gamepad. The `class` key is mandatory and
+* `pad`: Object representing the pad to use as a physical gamepad. The `class` key is mandatory and
   should contain the class implementing the device you want to play with.
   You can implement any kind of pad as long as this class implements the init() method.
   See GameboyJS.Keyboard class for an example of implementation. You may also provide
   a `mapping` object that will be used if you choose the GameboyJS.Gamepad class.
   Default is `{class: GameboyJS.Keyboard, mapping: null}`
-* zoom: The zoom level as an integer. Default is 1
-* statusContainerId: The ID of the HTML element for status display. Default is 'status'
-* gameNameContainerId: The ID of the HTML element for game name display. Default is 'game-name'
-* errorContainerId: The ID of the HTML element for error display. Default is 'error'
+* `zoom`: The zoom level as an integer. Default is 1
+* `romReaders`: An array of ROM reader objects that can read a ROM file
+  and send the data to the Gameboy.
+  Default is empty (`[]`), leading to a GameboyJS.RomFileReader to be created.
+* `statusContainerId`: ID of the HTML element for status display. Default is 'status'.
+* `gameNameContainerId`: ID of the HTML element for game name display. Default is 'game-name'.
+* `errorContainerId`: ID of the HTML element for error display. Default is 'error'.
 
 ### Build from source
 
@@ -70,10 +74,11 @@ npm install
 
 ### Devices
 
-The LCD screen is usable with background, window, and sprite display.
+The LCD screen is working but still has some sprite glitches.
 
 User input is available : arrow keys are mapped to the keyboard arrows,
 and A, B, START and SELECT are mapped to G, B, H, N respectively.
+Also, it's possible to use a gamepad using a custom `pad` option.
 
 Game saves are working fine and are stored as serialized data in the LocalStorage.
 
@@ -84,6 +89,9 @@ This seems to be due to the implementation of the Web Audio API in webkit.
 The serial port can be used by the program as an output,
 the received bytes are displayed in the console (this is mainly used for tests).
 
+The ROM files are accessed using an explorer on your computer.
+Other methods may be included (AJAX is supported with the RomAjaxReader class).
+
 ### Internal processes
 
 There is no boot program provided (nor supported).
@@ -93,7 +101,7 @@ All of the standard Gameboy instructions are implemented. Super Gameboy and Game
 
 The following features are in progress or partially working:
 * sprites (no support for sprite flags)
-* MBC (only MBC 1 and MBC 3 are partially supported)
+* MBC (only MBC 1, MBC 3 and MBC 5 are partially supported)
 * sound (ok on Firefox, poor on Chrome)
 
 The following features are not currently supported at all:

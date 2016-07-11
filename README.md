@@ -90,7 +90,7 @@ The serial port can be used by the program as an output,
 the received bytes are displayed in the console (this is mainly used for tests).
 
 The ROM files are accessed using an explorer on your computer.
-Other methods may be included (AJAX is supported with the RomAjaxReader class).
+Other methods may be included (AJAX and Drag & Drop are supported).
 
 ### Internal processes
 

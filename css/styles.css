@@ -45,6 +45,36 @@ canvas {
 #error {
     color: #F00;
 }
+.rom-section:after {
+    clear: both;
+    content: '';
+    display:block;
+}
+#rom-file {
+    float: left;
+    width: 50%;
+}
+#rom-drop {
+    float: left;
+    width: 50%;
+}
+#dropzone {
+    display:flex;
+    align-items: center;
+    margin: auto;
+    padding: 20px;
+    text-align: center;
+    width: 200px;
+    height: 200px;
+    border: 1px solid #999;
+    border-radius: 10px;
+    transition: color 300ms, background-color 300ms;
+}
+#dropzone.drag-active {
+    background-color: #5555CC;
+    color: white;
+}
+
 .hide {
     display:none;
 }

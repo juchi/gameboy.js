@@ -38,9 +38,19 @@
 </p>
 <p id="error" class="hide"></p>
 
-<p>
-    <label>Choose a ROM file on your computer: <input type="file" id="file"/></label>
-</p>
+<div class="rom-section">
+    <div id="rom-file">
+        <label>Choose a ROM file on your computer: <input type="file" id="file"/></label>
+    </div>
+
+    <div id="rom-drop">
+        <div id="dropzone">
+            <p>
+                Or drop a ROM file here
+            </p>
+        </div>
+    </div>
+</div>
 
 <div id="keyboard-info">
     <p>Current keyboard mapping:</p>
@@ -64,8 +74,15 @@
 
 <script type="text/javascript" src="./js/gameboy.js"></script>
 
-<script>
-var g = new GameboyJS.Gameboy(document.getElementById('canvas'));
+<script type="text/javascript">
+// configuration
+var opts = {
+    romReaders: [
+        new GameboyJS.RomFileReader(),
+        new GameboyJS.RomDropFileReader(document.getElementById('dropzone'))
+    ]
+};
+var g = new GameboyJS.Gameboy(document.getElementById('canvas'), opts);
 g.setSoundEnabled(document.getElementById('sound-enable').checked);
 g.setScreenZoom(document.getElementById('screen-zoom').value);
 </script>

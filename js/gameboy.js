@@ -1,3 +1,30 @@
+function loadboot(p) {
+    var boot = [
+        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
+        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
+        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
+        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
+        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
+        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
+        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
+        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
+        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
+        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
+        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
+        0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
+        0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
+        0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
+        0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
+        0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
+    ];
+
+    for (var i in boot) {
+        p.memory[i] = boot[i];
+    }
+    p.r.pc = 0;
+    p.usingBootRom = true;
+}
+
 var GameboyJS;
 (function (GameboyJS) {
 "use strict";
@@ -1237,6 +1264,7 @@ var GameboyJS;
 var defaultOptions = {
     pad: {class: GameboyJS.Keyboard, mapping: null},
     zoom: 1,
+    romReaders: [],
     statusContainerId: 'status',
     gameNameContainerId: 'game-name',
     errorContainerId: 'error'
@@ -1265,12 +1293,27 @@ var Gameboy = function(canvas, options) {
     this.input = input;
     this.pad = pad;
 
-    var romReader = new GameboyJS.RomFileReader();
-    var rom = new GameboyJS.Rom(this, romReader);
+    this.createRom(this.options.romReaders);
 
     this.statusContainer   = document.getElementById(this.options.statusContainerId) || document.createElement('div');
     this.gameNameContainer = document.getElementById(this.options.gameNameContainerId) || document.createElement('div');
     this.errorContainer    = document.getElementById(this.options.errorContainerId) || document.createElement('div');
+};
+
+// Create the ROM object and bind one or more readers
+Gameboy.prototype.createRom = function (readers) {
+    var rom = new GameboyJS.Rom(this);
+    if (readers.length == 0) {
+        // add the default rom reader
+        var romReader = new GameboyJS.RomFileReader();
+        rom.addReader(romReader);
+    } else {
+        for (var i in readers) {
+            if (readers.hasOwnProperty(i)) {
+                rom.addReader(readers[i]);
+            }
+        }
+    }
 };
 
 Gameboy.prototype.startRom = function(rom) {
@@ -1457,8 +1500,9 @@ MBC3.prototype.readRam = function(addr) {
     return this.extRam.manageRead(addr - 0xA000);
 };
 
+// declare MBC5 for compatibility with most cartriges
+// does not support rumble feature
 var MBC5 = MBC3;
-
 
 // MBC0 exists for consistency and manages the no-MBC cartriges
 var MBC0 = function(memory) {this.memory = memory;};
@@ -2190,30 +2234,134 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-// A FileReader is able to load a local file from an input element
-var RomFileReader = function() {
-    this.domElement = document.getElementById('file');
+// A RomAjaxReader is able to load a file through an AJAX request
+var RomAjaxReader = function() {
+
 };
 
-// Initialize the Reader
-// The callback argument willed be called when a file is successfully
+// The callback argument will be called when a file is successfully
 // read, with the data as argument (Uint8Array)
-RomFileReader.prototype.init = function(onLoadCallback) {
-    var self = this;
-    this.domElement.addEventListener('change', function(e){
-        self.loadFromFile(e.target.files[0], onLoadCallback);
-    });
-
+RomAjaxReader.prototype.setCallback = function(onLoadCallback) {
+    this.callback = onLoadCallback;
 };
 
-RomFileReader.prototype.loadFromFile = function(file, cb) {
+// This function should be called by application code
+// and will trigger the AJAX call itself and push data to the ROM object
+RomAjaxReader.prototype.loadFromUrl = function(url) {
+    if (!url) {
+        throw 'No url has been set in order to load a ROM file.';
+    }
+    var cb = this.callback;
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = "arraybuffer";
+    xhr.onload = function() {
+        var rom = new Uint8Array(xhr.response);
+        cb && cb(rom);
+    };
+
+    xhr.send();
+};
+
+GameboyJS.RomAjaxReader = RomAjaxReader;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+
+// A RomDropFileReader is able to load a drag and dropped file
+var RomDropFileReader = function(el) {
+    this.dropElement = el;
+    if (!this.dropElement) {
+        throw 'The RomDropFileReader needs a drop zone.';
+    }
+
+    var self = this;
+    this.dropElement.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        e.target.classList.add('drag-active');
+    });
+    this.dropElement.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.target.classList.remove('drag-active');
+    });
+    this.dropElement.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    this.dropElement.addEventListener('drop', function (e) {
+        e.target.classList.remove('drag-active');
+        if (e.dataTransfer.files.length == 0) {
+            return;
+        }
+        e.preventDefault();
+        self.loadFromFile(e.dataTransfer.files[0]);
+    });
+};
+
+// The callback argument will be called when a file is successfully
+// read, with the data as argument (Uint8Array)
+RomDropFileReader.prototype.setCallback = function(onLoadCallback) {
+    this.callback = onLoadCallback;
+};
+
+// The file loading logic is the same as the regular file reader
+RomDropFileReader.prototype.loadFromFile = function(file) {
     if (file === undefined) {
         return;
     }
     var fr = new FileReader();
-    var self = this;
+    var cb = this.callback;
+
     fr.onload = function() {
-        cb(new Uint8Array(fr.result));
+        cb && cb(new Uint8Array(fr.result));
+    };
+    fr.onerror = function(e) {
+        console.log('Error reading the file', e.target.error.code)
+    };
+    fr.readAsArrayBuffer(file);
+};
+
+GameboyJS.RomDropFileReader = RomDropFileReader;
+}(GameboyJS || (GameboyJS = {})));
+
+var GameboyJS;
+(function (GameboyJS) {
+"use strict";
+
+// A RomFileReader is able to load a local file from an input element
+//
+// Expects to be provided a file input element,
+// or will try to find one with the "file" DOM ID
+var RomFileReader = function(el) {
+    this.domElement = el || document.getElementById('file');
+    if (!this.domElement) {
+        throw 'The RomFileReader needs a valid input element.';
+    }
+
+    var self = this;
+    this.domElement.addEventListener('change', function(e){
+        self.loadFromFile(e.target.files[0]);
+    });
+};
+
+// The callback argument will be called when a file is successfully
+// read, with the data as argument (Uint8Array)
+RomFileReader.prototype.setCallback = function(onLoadCallback) {
+    this.callback = onLoadCallback;
+};
+
+// Automatically called when the DOM input is provided with a file
+RomFileReader.prototype.loadFromFile = function(file) {
+    if (file === undefined) {
+        return;
+    }
+    var fr = new FileReader();
+    var cb = this.callback;
+
+    fr.onload = function() {
+        cb && cb(new Uint8Array(fr.result));
     };
     fr.onerror = function(e) {
         console.log('Error reading the file', e.target.error.code)
@@ -2230,28 +2378,22 @@ var GameboyJS;
 
 
 var Rom = function(gameboy, romReader) {
-    var data = [];
+    this.gameboy = gameboy;
+    if (romReader) {
+        this.addReader(romReader);
+    }
+};
+
+Rom.prototype.addReader = function(romReader) {
     var self = this;
-    romReader.init(function(data) {
+    romReader.setCallback(function(data) {
         if (!validate(data)) {
-            gameboy.error('The file is not a valid GameBoy ROM.');
+            self.gameboy.error('The file is not a valid GameBoy ROM.');
             return;
         }
         self.data = data;
-        gameboy.startRom(self);
+        self.gameboy.startRom(self);
     });
-};
-
-Rom.prototype.requestFile = function(filename, cb) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', filename, true);
-    xhr.responseType = "arraybuffer";
-    xhr.onload = function() {
-        var rom = new Uint8Array(xhr.response);
-        cb(rom);
-    };
-
-    xhr.send();
 };
 
 // Validate the checksum of the cartridge header

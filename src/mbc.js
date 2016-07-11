@@ -19,6 +19,9 @@ MBC.getMbcInstance = function(memory, type) {
         case 0x0F: case 0x10: case 0x11: case 0x12: case 0x13:
             instance = new MBC3(memory);
             break;
+        case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E:
+            instance = new MBC5(memory);
+            break;
         default:
             throw new GameboyJS.UnimplementedException('MBC type not supported');
     }
@@ -113,6 +116,10 @@ MBC3.prototype.manageWrite = function(addr, value) {
 MBC3.prototype.readRam = function(addr) {
     return this.extRam.manageRead(addr - 0xA000);
 };
+
+// declare MBC5 for compatibility with most cartriges
+// does not support rumble feature
+var MBC5 = MBC3;
 
 // MBC0 exists for consistency and manages the no-MBC cartriges
 var MBC0 = function(memory) {this.memory = memory;};

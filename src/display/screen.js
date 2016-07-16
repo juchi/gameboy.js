@@ -32,6 +32,9 @@ Screen.prototype.initImageData = function() {
     this.canvas.width = Screen.physics.WIDTH * this.pixelSize;
     this.canvas.height = Screen.physics.HEIGHT * this.pixelSize;
     this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
+    for (var i = 0; i < this.imageData.data.length; i++) {
+        this.imageData.data[i] = 255;
+    }
 };
 
 Screen.prototype.clearScreen = function() {
@@ -42,15 +45,15 @@ Screen.prototype.clearScreen = function() {
 Screen.prototype.fillImageData = function(buffer) {
     for (var y = 0; y < Screen.physics.HEIGHT; y++) {
         for (var py = 0; py < this.pixelSize; py++) {
-            var _y = y * this.pixelSize + py;
+            var yOffset = (y * this.pixelSize + py) * this.canvas.width;
             for (var x = 0; x < Screen.physics.WIDTH; x++) {
                 for (var px = 0; px < this.pixelSize; px++) {
-                    var offset = _y * this.canvas.width + (x * this.pixelSize + px);
+                    var offset = yOffset + (x * this.pixelSize + px);
                     var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x]];
+                    // set RGB values
                     this.imageData.data[offset * 4] = v;
                     this.imageData.data[offset * 4 + 1] = v;
                     this.imageData.data[offset * 4 + 2] = v;
-                    this.imageData.data[offset * 4 + 3] = 255;
                 }
             }
         }

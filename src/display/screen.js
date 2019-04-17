@@ -50,7 +50,7 @@ Screen.prototype.fillImageData = function(buffer) {
             for (var x = 0; x < Screen.physics.WIDTH; x++) {
                 for (var px = 0; px < this.pixelSize; px++) {
                     var offset = yOffset + (x * this.pixelSize + px);
-                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x]] || [];
+                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x] | 0];
                     // set RGB values
                     this.imageData.data[offset * 4] = v[0];
                     this.imageData.data[offset * 4 + 1] = v[1];

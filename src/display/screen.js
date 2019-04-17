@@ -11,10 +11,10 @@ var Screen = function(canvas, pixelSize) {
 };
 
 Screen.colors = [
-    0xFF,
-    0xAA,
-    0x55,
-    0x00
+    [0xFF, 0xFF, 0xFF, 0xFF],
+    [0xAA, 0xAA, 0xAA, 0xAA],
+    [0x55, 0x55, 0x55, 0x55],
+    [0x00, 0x00, 0x00, 0x00]
 ];
 
 Screen.physics = {
@@ -49,11 +49,11 @@ Screen.prototype.fillImageData = function(buffer) {
             for (var x = 0; x < Screen.physics.WIDTH; x++) {
                 for (var px = 0; px < this.pixelSize; px++) {
                     var offset = yOffset + (x * this.pixelSize + px);
-                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x]];
+                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x]] || [];
                     // set RGB values
-                    this.imageData.data[offset * 4] = v;
-                    this.imageData.data[offset * 4 + 1] = v;
-                    this.imageData.data[offset * 4 + 2] = v;
+                    this.imageData.data[offset * 4] = v[0];
+                    this.imageData.data[offset * 4 + 1] = v[1];
+                    this.imageData.data[offset * 4 + 2] = v[2];
                 }
             }
         }

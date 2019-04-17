@@ -12,17 +12,24 @@ var RomDropFileReader = function(el) {
     var self = this;
     this.dropElement.addEventListener('dragenter', function(e) {
         e.preventDefault();
-        e.target.classList.add('drag-active');
+        if (e.target !== self.dropElement) {
+          return;
+        }
+        self.dropElement.classList.add('drag-active');
     });
     this.dropElement.addEventListener('dragleave', function(e) {
         e.preventDefault();
-        e.target.classList.remove('drag-active');
+        if (e.target !== self.dropElement) {
+          return;
+        }
+        self.dropElement.classList.remove('drag-active');
     });
     this.dropElement.addEventListener('dragover', function(e) {
         e.preventDefault();
+        self.dropElement.classList.add('drag-active');
     });
     this.dropElement.addEventListener('drop', function (e) {
-        e.target.classList.remove('drag-active');
+        self.dropElement.classList.remove('drag-active');
         if (e.dataTransfer.files.length == 0) {
             return;
         }

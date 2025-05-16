@@ -177,9 +177,7 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
             tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
         }
 
-        // try to retrieve the tile data from the cache, or use readTileData() to read from ram
-        // TODO find a better cache system now that the BG is rendered line by line
-        var tileData = this.bgTileCache[tileIndex] || (this.bgTileCache[tileIndex] = this.readTileData(tileIndex, dataStart));
+        var tileData = this.readTileData(tileIndex, dataStart);
 
         this.drawTileLine(tileData, tileLine);
         this.copyBGTileLine(lineBuffer, this.tileBuffer, x);
@@ -227,7 +225,7 @@ GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip) {
     }
 };
 
-GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
+GPU.prototype.drawSprites = function(LCDC, line, bgLineBuffer) {
     if (!GameboyJS.Util.readBit(LCDC, 1)) {
         return;
     }
@@ -238,6 +236,7 @@ GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
         var y = this.oamram(i);
         var x = this.oamram(i+1);
         var index = this.oamram(i+2);
+        if (spriteHeight === 16) index = index & 0xFE;
         var flags = this.oamram(i+3);
 
         if (y - 16 > line || y - 16 < line - spriteHeight) {
@@ -245,6 +244,7 @@ GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
         }
         sprites.push({x:x, y:y, index:index, flags:flags})
     }
+    sprites.sort((a, b) => a.x - b.x);
 
     if (sprites.length == 0) return;
 
@@ -255,22 +255,28 @@ GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
     for (var i = 0; i < sprites.length; i++) {
         var sprite = sprites[i];
         var tileLine = line - sprite.y + 16;
-        var paletteNumber = GameboyJS.Util.readBit(flags, 4);
+        var paletteNumber = GameboyJS.Util.readBit(sprite.flags, 4);
         var xflip = GameboyJS.Util.readBit(sprite.flags, 5);
         var yflip = GameboyJS.Util.readBit(sprite.flags, 6);
+        var priority = GameboyJS.Util.readBit(sprite.flags, 7);
         var tileData = cacheTile[sprite.index] || (cacheTile[sprite.index] = this.readTileData(sprite.index, 0x8000, spriteHeight * 2));
         this.drawTileLine(tileData, tileLine, xflip, yflip);
-        this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber);
+        this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber, priority, bgLineBuffer);
     }
 
     this.copySpriteLineToBuffer(spriteLineBuffer, line);
 };
 
 // Copy a tile line from a tileBuffer to a line buffer, at a given x position
-GPU.prototype.copySpriteTileLine = function(lineBuffer, tileBuffer, x, palette) {
+GPU.prototype.copySpriteTileLine = function(lineBuffer, tileBuffer, x, palette, priority, bgLineBuffer) {
     // copy tile line to buffer
     for (var k = 0; k < 8; k++, x++) {
         if (x < 0 || x >= Screen.physics.WIDTH || tileBuffer[k] == 0) continue;
+        if (lineBuffer[x]) continue;
+        if (priority === 1 && bgLineBuffer[x] > 0) {
+            lineBuffer[x] = {color:0, palette: palette};
+            continue;
+        }
         lineBuffer[x] = {color:tileBuffer[k], palette: palette};
     }
 };
@@ -293,7 +299,6 @@ GPU.prototype.copySpriteLineToBuffer = function(spriteLineBuffer, line) {
 GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
     xflip = xflip | 0;
     yflip = yflip | 0;
-    spriteMode = spriteMode | 0;
     var byteIndex = 0;
     for (var line = 0; line < 8; line++) {
         var l = yflip ? 7 - line : line;
@@ -303,7 +308,6 @@ GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yf
         for (var pixel = 0; pixel < 8; pixel++) {
             var mask = (1 << (7-pixel));
             var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
-            if (spriteMode && colorValue == 0) continue;
             var p = xflip ? 7 - pixel : pixel;
             var bufferIndex = (x + p) + (y + l) * bufferWidth;
             buffer[bufferIndex] = colorValue;

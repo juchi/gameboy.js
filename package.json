@@ -8,10 +8,13 @@
     },
     "homepage": "http://juchi.github.io/gameboy.js/",
     "license": "MIT",
+    "scripts": {
+        "build": "grunt"
+    },
     "devDependencies": {
-        "grunt": "~0.4.5",
-        "grunt-cli": "~0.1.13",
-        "grunt-contrib-concat": "~0.5.1",
-        "grunt-contrib-uglify": "^4.0.1"
+        "grunt": "~1.6.1",
+        "grunt-cli": "~1.5.0",
+        "grunt-contrib-concat": "~1.0.1",
+        "grunt-contrib-uglify": "^5.2.2"
     }
 }

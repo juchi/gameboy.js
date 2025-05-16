@@ -67,7 +67,7 @@ and run the grunt tasks :
 ```
 git clone https://github.com/juchi/gameboy.js
 npm install
-./node_modules/.bin/grunt
+npm run build
 ```
 
 ## Features

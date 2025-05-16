@@ -97,12 +97,12 @@ GPU.prototype.updateLY = function() {
     this.deviceram(this.LY, this.line);
     var STAT = this.deviceram(this.STAT);
     if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
-        this.deviceram(this.STAT, STAT | (1 << 2));
+        this.deviceram(this.STAT, STAT | (1 << 2));
         if (STAT & (1 << 6)) {
             this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
         }
     } else {
-        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
+        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
     }
 };
 
@@ -163,7 +163,7 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
     var tileLine = ((line + bgy) & 7);
 
     // browse BG tilemap for the line to render
-    var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
+    var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
     var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
     var lastTile = firstTile + Screen.physics.WIDTH / 8 + 1;
     if ((lastTile & 0x1F) < (firstTile & 0x1F)) {

@@ -5,6 +5,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
     this.playing = false;
+    this.dac = false;
 
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
     this.soundLength = 64; // defaults to 64 periods
@@ -41,7 +42,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
 };
 
 Channel1.prototype.play = function() {
-    if (this.playing) return;
+    if (this.playing || !this.dac) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.gainNode.connect(this.audioContext.destination);
@@ -54,6 +55,13 @@ Channel1.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
+};
+Channel1.prototype.updateDAC = function(controlRegister) {
+    this.setDAC((controlRegister & 0xF8) > 0);
+};
+Channel1.prototype.setDAC = function (value) {
+    this.dac = value;
+    if (!value) this.stop();
 };
 Channel1.prototype.checkFreqSweep = function() {
     var oldFreq = this.getFrequency();

@@ -5,6 +5,7 @@ var Channel4 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
     this.playing = false;
+    this.dac = false;
 
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
     this.soundLength = 64; // defaults to 64 periods
@@ -16,7 +17,7 @@ var Channel4 = function(apu, channelNumber, audioContext) {
 };
 
 Channel4.prototype.play = function() {
-    if (this.playing) return;
+    if (this.playing || !this.dac) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.clockLength = 0;
@@ -24,6 +25,13 @@ Channel4.prototype.play = function() {
 Channel4.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
+};
+Channel4.prototype.updateDAC = function(controlRegister) {
+    this.setDAC((controlRegister & 0xF8) > 0);
+};
+Channel4.prototype.setDAC = function (value) {
+    this.dac = value;
+    if (!value) this.stop();
 };
 Channel4.prototype.update = function(clockElapsed) {
     if (this.lengthCheck) {

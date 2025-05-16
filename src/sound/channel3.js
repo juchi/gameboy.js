@@ -5,6 +5,7 @@ var Channel3 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
     this.playing = false;
+    this.dac = false;
 
     this.soundLength = 0;
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
@@ -33,7 +34,7 @@ var Channel3 = function(apu, channelNumber, audioContext) {
 
 };
 Channel3.prototype.play = function() {
-    if (this.playing) return;
+    if (this.playing || !this.dac) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.waveBuffer.copyToChannel(this.buffer, 0, 0);
@@ -45,6 +46,13 @@ Channel3.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
+};
+Channel3.prototype.updateDAC = function(controlRegister) {
+    this.setDAC((controlRegister & 0x80) > 0);
+};
+Channel3.prototype.setDAC = function (value) {
+    this.dac = value;
+    if (!value) this.stop();
 };
 Channel3.prototype.update = function(clockElapsed) {
     if (this.lengthCheck){

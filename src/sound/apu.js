@@ -72,6 +72,7 @@ APU.prototype.manageWrite = function(addr, value) {
             var envelopeVolume = (value & 0xF0) >> 4;
             this.channel1.setEnvelopeVolume(envelopeVolume);
             this.channel1.envelopeStep = (value & 0x07);
+            this.channel1.updateDAC(value);
             break;
         case 0xFF13:
             var frequency = this.channel1.getFrequency();
@@ -98,6 +99,7 @@ APU.prototype.manageWrite = function(addr, value) {
             var envelopeVolume = (value & 0xF0) >> 4;
             this.channel2.setEnvelopeVolume(envelopeVolume);
             this.channel2.envelopeStep = (value & 0x07);
+            this.channel2.updateDAC(value);
             break;
         case 0xFF18:
             var frequency = this.channel2.getFrequency();
@@ -119,6 +121,7 @@ APU.prototype.manageWrite = function(addr, value) {
         // Channel 3 addresses
         case 0xFF1A:
             // todo
+            this.channel3.updateDAC(value);
             break;
         case 0xFF1B:
             this.channel3.setLength(value);
@@ -149,6 +152,7 @@ APU.prototype.manageWrite = function(addr, value) {
             break;
         case 0xFF21:
             // todo
+            this.channel4.updateDAC(value);
             break;
         case 0xFF22:
             // todo

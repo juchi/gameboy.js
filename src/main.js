@@ -26,7 +26,7 @@ var Gameboy = function(canvas, options) {
     cpu.gpu = gpu;
 
     var pad = new this.options.pad.class(this.options.pad.mapping);
-    var input = new GameboyJS.Input(cpu, pad);
+    var input = new GameboyJS.Input(cpu, pad, canvas);
     cpu.input = input;
 
     this.cpu = cpu;
@@ -65,6 +65,7 @@ Gameboy.prototype.startRom = function(rom) {
         this.setStatus('Game Running :');
         this.setGameName(this.cpu.getGameName());
         this.cpu.run();
+        this.screen.canvas.focus();
     } catch (e) {
         this.handleException(e);
     }

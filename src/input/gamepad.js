@@ -32,7 +32,7 @@ var Gamepad = function(mapping) {
 
 // Initialize the keyboard listeners and set up the callbacks
 // for button press / release
-Gamepad.prototype.init = function(onPress, onRelease) {
+Gamepad.prototype.init = function(canvas, onPress, onRelease) {
     this.onPress = onPress;
     this.onRelease = onRelease;
 

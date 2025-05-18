@@ -8,16 +8,20 @@ var Keyboard = function() {};
 
 // Initialize the keyboard listeners and set up the callbacks
 // for button press / release
-Keyboard.prototype.init = function(onPress, onRelease) {
+Keyboard.prototype.init = function(canvas, onPress, onRelease) {
     this.onPress = onPress;
     this.onRelease = onRelease;
 
     var self = this;
-    document.addEventListener('keydown', function(e) {
+    canvas.addEventListener('keydown', function(e) {
         self.managePress(e.keyCode);
+        if (e.keyCode !== 9) // only keep Tab active
+            e.preventDefault();
     });
-    document.addEventListener('keyup', function(e) {
+    canvas.addEventListener('keyup', function(e) {
         self.manageRelease(e.keyCode);
+        if (e.keyCode !== 9) // only keep Tab active
+            e.preventDefault();
     });
 }
 

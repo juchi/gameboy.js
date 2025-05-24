@@ -21,8 +21,8 @@ header h1 {
     text-align:center;
 }
 #container {
-    width:800px;
-    margin:auto;
+    max-width: 800px;
+    margin: auto;
 }
 .canvas-container {
     text-align:center;
@@ -45,18 +45,14 @@ canvas {
 #error {
     color: #F00;
 }
-.rom-section:after {
-    clear: both;
-    content: '';
-    display:block;
+.rom-section {
+    display: flex;
+    flex-wrap: wrap;
 }
-#rom-file {
-    float: left;
-    width: 50%;
-}
-#rom-drop {
-    float: left;
-    width: 50%;
+@media screen and (min-width: 800px) {
+    .rom-section > div {
+        width: 50%;
+    }
 }
 #dropzone {
     display:flex;

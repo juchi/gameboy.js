@@ -1,30 +1,3 @@
-function loadboot(p) {
-    var boot = [
-        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
-        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
-        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
-        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
-        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
-        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
-        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
-        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
-        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
-        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
-        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
-        0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
-        0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
-        0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
-        0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
-        0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
-    ];
-
-    for (var i in boot) {
-        p.memory[i] = boot[i];
-    }
-    p.r.pc = 0;
-    p.usingBootRom = true;
-}
-
 var GameboyJS;
 (function (GameboyJS) {
 "use strict";
@@ -34,7 +7,7 @@ var CPU = function(gameboy) {
     this.gameboy = gameboy;
 
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
-    this.IME = true;
+    this.IME = false;
     this.clock = {c: 0, serial: 0};
     this.isHalted = false;
     this.isPaused = false;
@@ -70,8 +43,7 @@ CPU.prototype.createDevices = function() {
 
 CPU.prototype.reset = function() {
     this.memory.reset();
-
-    this.r.sp = 0xFFFE;
+    this.r = {A:0x01, F: 0, B:0xFF, C:0x13, D:0, E:0xC1, H:0x84, L:0x03, pc:0, sp:0xFFFE};
 };
 
 CPU.prototype.loadRom = function(data) {
@@ -207,7 +179,7 @@ CPU.prototype.checkInterrupt = function() {
     if (!this.IME) {
         return;
     }
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 5 && this.IME; i++) {
         var IFval = this.memory.rb(0xFF0F);
         if (GameboyJS.Util.readBit(IFval, i) && this.isInterruptEnable(i)) {
             IFval &= (0xFF - (1<<i));
@@ -215,7 +187,6 @@ CPU.prototype.checkInterrupt = function() {
             this.disableInterrupts();
             this.clock.c += 4; // 20 clocks to serve interrupt, with 16 for RSTn
             CPU.interruptRoutines[i](this);
-            break;
         }
     }
 };
@@ -431,12 +402,12 @@ GPU.prototype.updateLY = function() {
     this.deviceram(this.LY, this.line);
     var STAT = this.deviceram(this.STAT);
     if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
-        this.deviceram(this.STAT, STAT | (1 << 2));
+        this.deviceram(this.STAT, STAT | (1 << 2));
         if (STAT & (1 << 6)) {
             this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
         }
     } else {
-        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
+        this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
     }
 };
 
@@ -497,7 +468,7 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
     var tileLine = ((line + bgy) & 7);
 
     // browse BG tilemap for the line to render
-    var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
+    var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
     var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
     var lastTile = firstTile + Screen.physics.WIDTH / 8 + 1;
     if ((lastTile & 0x1F) < (firstTile & 0x1F)) {
@@ -511,9 +482,7 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
             tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
         }
 
-        // try to retrieve the tile data from the cache, or use readTileData() to read from ram
-        // TODO find a better cache system now that the BG is rendered line by line
-        var tileData = this.bgTileCache[tileIndex] || (this.bgTileCache[tileIndex] = this.readTileData(tileIndex, dataStart));
+        var tileData = this.readTileData(tileIndex, dataStart);
 
         this.drawTileLine(tileData, tileLine);
         this.copyBGTileLine(lineBuffer, this.tileBuffer, x);
@@ -561,7 +530,7 @@ GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip) {
     }
 };
 
-GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
+GPU.prototype.drawSprites = function(LCDC, line, bgLineBuffer) {
     if (!GameboyJS.Util.readBit(LCDC, 1)) {
         return;
     }
@@ -572,6 +541,7 @@ GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
         var y = this.oamram(i);
         var x = this.oamram(i+1);
         var index = this.oamram(i+2);
+        if (spriteHeight === 16) index = index & 0xFE;
         var flags = this.oamram(i+3);
 
         if (y - 16 > line || y - 16 < line - spriteHeight) {
@@ -579,6 +549,7 @@ GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
         }
         sprites.push({x:x, y:y, index:index, flags:flags})
     }
+    sprites.sort((a, b) => a.x - b.x);
 
     if (sprites.length == 0) return;
 
@@ -589,22 +560,28 @@ GPU.prototype.drawSprites = function(LCDC, line, lineBuffer) {
     for (var i = 0; i < sprites.length; i++) {
         var sprite = sprites[i];
         var tileLine = line - sprite.y + 16;
-        var paletteNumber = GameboyJS.Util.readBit(flags, 4);
+        var paletteNumber = GameboyJS.Util.readBit(sprite.flags, 4);
         var xflip = GameboyJS.Util.readBit(sprite.flags, 5);
         var yflip = GameboyJS.Util.readBit(sprite.flags, 6);
+        var priority = GameboyJS.Util.readBit(sprite.flags, 7);
         var tileData = cacheTile[sprite.index] || (cacheTile[sprite.index] = this.readTileData(sprite.index, 0x8000, spriteHeight * 2));
         this.drawTileLine(tileData, tileLine, xflip, yflip);
-        this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber);
+        this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber, priority, bgLineBuffer);
     }
 
     this.copySpriteLineToBuffer(spriteLineBuffer, line);
 };
 
 // Copy a tile line from a tileBuffer to a line buffer, at a given x position
-GPU.prototype.copySpriteTileLine = function(lineBuffer, tileBuffer, x, palette) {
+GPU.prototype.copySpriteTileLine = function(lineBuffer, tileBuffer, x, palette, priority, bgLineBuffer) {
     // copy tile line to buffer
     for (var k = 0; k < 8; k++, x++) {
         if (x < 0 || x >= Screen.physics.WIDTH || tileBuffer[k] == 0) continue;
+        if (lineBuffer[x]) continue;
+        if (priority === 1 && bgLineBuffer[x] > 0) {
+            lineBuffer[x] = {color:0, palette: palette};
+            continue;
+        }
         lineBuffer[x] = {color:tileBuffer[k], palette: palette};
     }
 };
@@ -627,7 +604,6 @@ GPU.prototype.copySpriteLineToBuffer = function(spriteLineBuffer, line) {
 GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yflip, spriteMode) {
     xflip = xflip | 0;
     yflip = yflip | 0;
-    spriteMode = spriteMode | 0;
     var byteIndex = 0;
     for (var line = 0; line < 8; line++) {
         var l = yflip ? 7 - line : line;
@@ -637,7 +613,6 @@ GPU.prototype.drawTile = function(tileData, x, y, buffer, bufferWidth, xflip, yf
         for (var pixel = 0; pixel < 8; pixel++) {
             var mask = (1 << (7-pixel));
             var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
-            if (spriteMode && colorValue == 0) continue;
             var p = xflip ? 7 - pixel : pixel;
             var bufferIndex = (x + p) + (y + l) * bufferWidth;
             buffer[bufferIndex] = colorValue;
@@ -733,11 +708,12 @@ var Screen = function(canvas, pixelSize) {
     this.initImageData();
 };
 
+// Palette colors (RGB)
 Screen.colors = [
-    0xFF,
-    0xAA,
-    0x55,
-    0x00
+    [0xFF, 0xFF, 0xFF],
+    [0xAA, 0xAA, 0xAA],
+    [0x55, 0x55, 0x55],
+    [0x00, 0x00, 0x00]
 ];
 
 Screen.physics = {
@@ -755,6 +731,9 @@ Screen.prototype.initImageData = function() {
     this.canvas.width = Screen.physics.WIDTH * this.pixelSize;
     this.canvas.height = Screen.physics.HEIGHT * this.pixelSize;
     this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
+    for (var i = 0; i < this.imageData.data.length; i++) {
+        this.imageData.data[i] = 255;
+    }
 };
 
 Screen.prototype.clearScreen = function() {
@@ -765,15 +744,15 @@ Screen.prototype.clearScreen = function() {
 Screen.prototype.fillImageData = function(buffer) {
     for (var y = 0; y < Screen.physics.HEIGHT; y++) {
         for (var py = 0; py < this.pixelSize; py++) {
-            var _y = y * this.pixelSize + py;
+            var yOffset = (y * this.pixelSize + py) * this.canvas.width;
             for (var x = 0; x < Screen.physics.WIDTH; x++) {
                 for (var px = 0; px < this.pixelSize; px++) {
-                    var offset = _y * this.canvas.width + (x * this.pixelSize + px);
-                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x]];
-                    this.imageData.data[offset * 4] = v;
-                    this.imageData.data[offset * 4 + 1] = v;
-                    this.imageData.data[offset * 4 + 2] = v;
-                    this.imageData.data[offset * 4 + 3] = 255;
+                    var offset = yOffset + (x * this.pixelSize + px);
+                    var v = Screen.colors[buffer[y * Screen.physics.WIDTH + x] | 0];
+                    // set RGB values
+                    this.imageData.data[offset * 4] = v[0];
+                    this.imageData.data[offset * 4 + 1] = v[1];
+                    this.imageData.data[offset * 4 + 2] = v[2];
                 }
             }
         }
@@ -890,7 +869,7 @@ var Gamepad = function(mapping) {
 
 // Initialize the keyboard listeners and set up the callbacks
 // for button press / release
-Gamepad.prototype.init = function(onPress, onRelease) {
+Gamepad.prototype.init = function(canvas, onPress, onRelease) {
     this.onPress = onPress;
     this.onRelease = onRelease;
 
@@ -950,13 +929,14 @@ var GameboyJS;
 // like GameboyJS.Keyboard after a physical button trigger event
 //
 // They rely on the name of the original buttons as parameters (see Input.keys)
-var Input = function(cpu, pad) {
+var Input = function(cpu, pad, canvas) {
     this.cpu = cpu;
     this.memory = cpu.memory;
     this.P1 = 0xFF00;
     this.state = 0;
+    this.interruptQueue = [];
 
-    pad.init(this.pressKey.bind(this), this.releaseKey.bind(this));
+    pad.init(canvas, this.pressKey.bind(this), this.releaseKey.bind(this));
 };
 
 Input.keys = {
@@ -971,9 +951,7 @@ Input.keys = {
 };
 
 Input.prototype.pressKey = function(key) {
-    this.state |= Input.keys[key];
-
-    this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
+    this.delayInterrupt(key);
 };
 
 Input.prototype.releaseKey = function(key) {
@@ -981,14 +959,34 @@ Input.prototype.releaseKey = function(key) {
     this.state &= mask;
 };
 
+// do not send the interrupt right away, due to the way javascript works :
+// the key event fires when no other code is running, meaning when the frame()
+// in the GPU has finished rendering. This means the interrupt will always run
+// at LY = 144, which prevents the game to generate entropy for the key press actions
+//
+// the event is stored in a queue which is processed the next time the LY register is
+// at the randomly determined value
+Input.prototype.delayInterrupt = function(key) {
+    let ly = (Math.random() * 153) | 0;
+    this.interruptQueue.push({ly: ly, key: key});
+};
+
 Input.prototype.update = function() {
+    if (this.interruptQueue.length > 0) { // check for interrupt to fire
+        if (this.interruptQueue[0].ly === this.memory.rb(this.cpu.gpu.LY)) {
+            let v = this.interruptQueue.shift();
+            this.state |= Input.keys[v.key];
+            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
+        }
+    }
+
     var value = this.memory.rb(this.P1);
     value = ((~value) & 0x30); // invert the value so 1 means 'active'
     if (value & 0x10) { // direction keys listened
         value |= (this.state & 0x0F);
     } else if (value & 0x20) { // action keys listened
         value |= ((this.state & 0xF0) >> 4);
-    } else if ((value & 0x30) == 0) { // no keys listened
+    } else if ((value & 0x30) === 0) { // no keys listened
         value &= 0xF0;
     }
 
@@ -1008,16 +1006,23 @@ var Keyboard = function() {};
 
 // Initialize the keyboard listeners and set up the callbacks
 // for button press / release
-Keyboard.prototype.init = function(onPress, onRelease) {
+Keyboard.prototype.init = function(canvas, onPress, onRelease) {
     this.onPress = onPress;
     this.onRelease = onRelease;
+    if (canvas.getAttribute('tabIndex') === null)  {
+        canvas.setAttribute('tabIndex', 1);
+    }
 
     var self = this;
-    document.addEventListener('keydown', function(e) {
+    canvas.addEventListener('keydown', function(e) {
         self.managePress(e.keyCode);
+        if (e.keyCode !== 9) // only keep Tab active
+            e.preventDefault();
     });
-    document.addEventListener('keyup', function(e) {
+    canvas.addEventListener('keyup', function(e) {
         self.manageRelease(e.keyCode);
+        if (e.keyCode !== 9) // only keep Tab active
+            e.preventDefault();
     });
 }
 
@@ -1285,7 +1290,7 @@ var Gameboy = function(canvas, options) {
     cpu.gpu = gpu;
 
     var pad = new this.options.pad.class(this.options.pad.mapping);
-    var input = new GameboyJS.Input(cpu, pad);
+    var input = new GameboyJS.Input(cpu, pad, canvas);
     cpu.input = input;
 
     this.cpu = cpu;
@@ -1324,6 +1329,7 @@ Gameboy.prototype.startRom = function(rom) {
         this.setStatus('Game Running :');
         this.setGameName(this.cpu.getGameName());
         this.cpu.run();
+        this.screen.canvas.focus();
     } catch (e) {
         this.handleException(e);
     }
@@ -1428,7 +1434,7 @@ MBC1.prototype.manageWrite = function(addr, value) {
     switch (addr & 0xF000) {
         case 0x0000: case 0x1000: // enable RAM
             this.ramEnabled = (value & 0x0A) ? true : false;
-            if (this.ramEnabled) {
+            if (!this.ramEnabled) {
                 this.extRam.saveRamData();
             }
             break;
@@ -1475,7 +1481,7 @@ MBC3.prototype.manageWrite = function(addr, value) {
     switch (addr & 0xF000) {
         case 0x0000: case 0x1000: // enable RAM
             this.ramEnabled = (value & 0x0A) ? true : false;
-            if (this.ramEnabled) {
+            if (!this.ramEnabled) {
                 this.extRam.saveRamData();
             }
             break;
@@ -1505,13 +1511,24 @@ MBC3.prototype.readRam = function(addr) {
 var MBC5 = MBC3;
 
 // MBC0 exists for consistency and manages the no-MBC cartriges
-var MBC0 = function(memory) {this.memory = memory;};
+var MBC0 = function(memory) {
+    this.memory = memory;
+    this.extRam = new GameboyJS.ExtRam();
+};
 
 MBC0.prototype.manageWrite = function(addr, value) {
     this.memory.loadRomBank(value);
+    if (addr >= 0xA000 && addr < 0xC000) {
+        this.extRam.manageWrite(addr - 0xA000, value);
+        this.extRam.saveRamData();
+    }
 };
-MBC0.prototype.readRam = function(addr) {return 0;};
-MBC0.prototype.loadRam = function() {};
+MBC0.prototype.readRam = function(addr) {
+    return this.extRam.manageRead(addr - 0xA000);
+};
+MBC0.prototype.loadRam = function(game, size) {
+    this.extRam.loadRam(game, size);
+};
 
 GameboyJS.MBC = MBC;
 }(GameboyJS || (GameboyJS = {})));
@@ -2281,17 +2298,24 @@ var RomDropFileReader = function(el) {
     var self = this;
     this.dropElement.addEventListener('dragenter', function(e) {
         e.preventDefault();
-        e.target.classList.add('drag-active');
+        if (e.target !== self.dropElement) {
+          return;
+        }
+        self.dropElement.classList.add('drag-active');
     });
     this.dropElement.addEventListener('dragleave', function(e) {
         e.preventDefault();
-        e.target.classList.remove('drag-active');
+        if (e.target !== self.dropElement) {
+          return;
+        }
+        self.dropElement.classList.remove('drag-active');
     });
     this.dropElement.addEventListener('dragover', function(e) {
         e.preventDefault();
+        self.dropElement.classList.add('drag-active');
     });
     this.dropElement.addEventListener('drop', function (e) {
-        e.target.classList.remove('drag-active');
+        self.dropElement.classList.remove('drag-active');
         if (e.dataTransfer.files.length == 0) {
             return;
         }
@@ -2463,7 +2487,7 @@ var APU = function(memory) {
     this.memory = memory;
     this.enabled = false;
 
-    AudioContext = window.AudioContext || window.webkitAudioContext;
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
     var audioContext = new AudioContext();
 
     this.channel1 = new GameboyJS.Channel1(this, 1, audioContext);
@@ -2526,6 +2550,7 @@ APU.prototype.manageWrite = function(addr, value) {
             var envelopeVolume = (value & 0xF0) >> 4;
             this.channel1.setEnvelopeVolume(envelopeVolume);
             this.channel1.envelopeStep = (value & 0x07);
+            this.channel1.updateDAC(value);
             break;
         case 0xFF13:
             var frequency = this.channel1.getFrequency();
@@ -2552,6 +2577,7 @@ APU.prototype.manageWrite = function(addr, value) {
             var envelopeVolume = (value & 0xF0) >> 4;
             this.channel2.setEnvelopeVolume(envelopeVolume);
             this.channel2.envelopeStep = (value & 0x07);
+            this.channel2.updateDAC(value);
             break;
         case 0xFF18:
             var frequency = this.channel2.getFrequency();
@@ -2573,6 +2599,7 @@ APU.prototype.manageWrite = function(addr, value) {
         // Channel 3 addresses
         case 0xFF1A:
             // todo
+            this.channel3.updateDAC(value);
             break;
         case 0xFF1B:
             this.channel3.setLength(value);
@@ -2603,6 +2630,7 @@ APU.prototype.manageWrite = function(addr, value) {
             break;
         case 0xFF21:
             // todo
+            this.channel4.updateDAC(value);
             break;
         case 0xFF22:
             // todo
@@ -2672,6 +2700,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
     this.playing = false;
+    this.dac = false;
 
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
     this.soundLength = 64; // defaults to 64 periods
@@ -2708,7 +2737,7 @@ var Channel1 = function(apu, channelNumber, audioContext) {
 };
 
 Channel1.prototype.play = function() {
-    if (this.playing) return;
+    if (this.playing || !this.dac) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.gainNode.connect(this.audioContext.destination);
@@ -2721,6 +2750,13 @@ Channel1.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
+};
+Channel1.prototype.updateDAC = function(controlRegister) {
+    this.setDAC((controlRegister & 0xF8) > 0);
+};
+Channel1.prototype.setDAC = function (value) {
+    this.dac = value;
+    if (!value) this.stop();
 };
 Channel1.prototype.checkFreqSweep = function() {
     var oldFreq = this.getFrequency();
@@ -2802,6 +2838,7 @@ var Channel3 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
     this.playing = false;
+    this.dac = false;
 
     this.soundLength = 0;
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
@@ -2830,7 +2867,7 @@ var Channel3 = function(apu, channelNumber, audioContext) {
 
 };
 Channel3.prototype.play = function() {
-    if (this.playing) return;
+    if (this.playing || !this.dac) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.waveBuffer.copyToChannel(this.buffer, 0, 0);
@@ -2842,6 +2879,13 @@ Channel3.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
     this.gainNode.disconnect();
+};
+Channel3.prototype.updateDAC = function(controlRegister) {
+    this.setDAC((controlRegister & 0x80) > 0);
+};
+Channel3.prototype.setDAC = function (value) {
+    this.dac = value;
+    if (!value) this.stop();
 };
 Channel3.prototype.update = function(clockElapsed) {
     if (this.lengthCheck){
@@ -2889,6 +2933,7 @@ var Channel4 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
     this.playing = false;
+    this.dac = false;
 
     this.soundLengthUnit = 0x4000; // 1 / 256 second of instructions
     this.soundLength = 64; // defaults to 64 periods
@@ -2900,7 +2945,7 @@ var Channel4 = function(apu, channelNumber, audioContext) {
 };
 
 Channel4.prototype.play = function() {
-    if (this.playing) return;
+    if (this.playing || !this.dac) return;
     this.playing = true;
     this.apu.setSoundFlag(this.channelNumber, 1);
     this.clockLength = 0;
@@ -2908,6 +2953,13 @@ Channel4.prototype.play = function() {
 Channel4.prototype.stop = function() {
     this.playing = false;
     this.apu.setSoundFlag(this.channelNumber, 0);
+};
+Channel4.prototype.updateDAC = function(controlRegister) {
+    this.setDAC((controlRegister & 0xF8) > 0);
+};
+Channel4.prototype.setDAC = function (value) {
+    this.dac = value;
+    if (!value) this.stop();
 };
 Channel4.prototype.update = function(clockElapsed) {
     if (this.lengthCheck) {

@@ -2,21 +2,20 @@ var GameboyJS;
 (function (GameboyJS) {
 "use strict";
 
-// This is the default buttons mapping for the Gamepad
-// It's optimized for the XBOX pad
+// This is the default buttons mapping for the Gamepad API
 //
 // Any other mapping can be provided as a constructor argument of the Gamepad object
 // An alternative mapping should be an object with keys being the indexes
 // of the gamepad buttons and values the normalized gameboy button names
-var xboxMapping = {
-    0: 'UP',
-    1: 'DOWN',
-    2: 'LEFT',
-    3: 'RIGHT',
-    4: 'START',
-    5: 'SELECT',
-    11: 'A',
-    12: 'B'
+var standardMapping = {
+    0: 'A',
+    1: 'B',
+    8: 'SELECT',
+    9: 'START',
+    12: 'UP',
+    13: 'DOWN',
+    14: 'LEFT',
+    15: 'RIGHT',
 };
 
 // Gamepad listener
@@ -27,7 +26,7 @@ var Gamepad = function(mapping) {
     this.gamepad = null;
     this.state = {A:0,B:0,START:0,SELECT:0,LEFT:0,RIGHT:0,UP:0,DOWN:0};
     this.pullInterval = null;
-    this.buttonMapping = mapping || xboxMapping;
+    this.buttonMapping = mapping || standardMapping;
 };
 
 // Initialize the keyboard listeners and set up the callbacks

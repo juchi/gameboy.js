@@ -11,6 +11,9 @@ var Keyboard = function() {};
 Keyboard.prototype.init = function(canvas, onPress, onRelease) {
     this.onPress = onPress;
     this.onRelease = onRelease;
+    if (canvas.getAttribute('tabIndex') === null)  {
+        canvas.setAttribute('tabIndex', 1);
+    }
 
     var self = this;
     canvas.addEventListener('keydown', function(e) {

@@ -43,7 +43,7 @@ CPU.prototype.createDevices = function() {
 
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
-    this.serialHandler = ConsoleSerial;
+    this.serialHandler = new ConsoleSerial;
 };
 
 CPU.prototype.reset = function() {

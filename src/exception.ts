@@ -1,6 +1,6 @@
 // This exception should be thrown whenever a critical feature that
 // has not been implemented is requested
-function UnimplementedException(message, fatal) {
+function UnimplementedException(message: string, fatal?: boolean) {
     this.message = message;
     this.name = UnimplementedException;
     if (fatal === undefined) {

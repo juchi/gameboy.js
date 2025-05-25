@@ -1,5 +1,4 @@
 import Util from './util';
-import {cpuOps} from './instructions';
 
 var Debug = {};
 // Output a range of 16 memory addresses
@@ -24,16 +23,16 @@ Debug.view_memory = function(addr, gameboy) {
 Debug.view_tile = function(gameboy, index, dataStart) {
     var memory = gameboy.cpu.memory;
     var screen = gameboy.screen;
-    var LCDC = screen.deviceram(screen.LCDC);
+    var LCDC = memory.deviceram(screen.LCDC);
     if (typeof dataStart === 'undefined') {
         dataStart = 0x8000;
         if (!Util.readBit(LCDC, 4)) {
             dataStart = 0x8800;
-            index = cpuOps._getSignedValue(index) + 128;
+            index = Util.getSignedValue(index) + 128;
         }
     }
 
-    var tileData = screen.readTileData(index, dataStart);
+    var tileData = gameboy.cpu.gpu.readTileData(index, dataStart);
 
     var pixelData = new Array(8 * 8)
     for (var line = 0; line < 8; line++) {

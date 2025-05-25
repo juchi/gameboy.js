@@ -12,7 +12,7 @@ var CPU = function(gameboy) {
     this.gameboy = gameboy;
 
     this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
-    this.IME = true;
+    this.IME = false;
     this.clock = {c: 0, serial: 0};
     this.isHalted = false;
     this.isPaused = false;
@@ -185,7 +185,7 @@ CPU.prototype.checkInterrupt = function() {
     if (!this.IME) {
         return;
     }
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 5 && this.IME; i++) {
         var IFval = this.memory.rb(0xFF0F);
         if (Util.readBit(IFval, i) && this.isInterruptEnable(i)) {
             IFval &= (0xFF - (1<<i));
@@ -193,7 +193,6 @@ CPU.prototype.checkInterrupt = function() {
             this.disableInterrupts();
             this.clock.c += 4; // 20 clocks to serve interrupt, with 16 for RSTn
             CPU.interruptRoutines[i](this);
-            break;
         }
     }
 };

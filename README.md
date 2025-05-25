@@ -1,7 +1,7 @@
 Gameboy.js
 ==========
 
-Gameboy.js is a gameboy emulator written in JavaScript.
+Gameboy.js is a Gameboy emulator written in JavaScript.
 
 It's a work in progress, see the Features section.
 
@@ -9,19 +9,19 @@ It's a work in progress, see the Features section.
 
 Tested on:
 * Firefox
-* Chrome (sound issues)
-* Safari (sound issues)
+* Chrome
+* Safari
 
 ## Usage
 
 ### Run now
 
-You can try the emulator directly on the [demo site](http://juchi.github.io/gameboy.js/).
+You can try the emulator directly on the [demo page](http://juchi.github.io/gameboy.js/).
 
-Tests ROM can be downloaded [here](http://blargg.8bitalley.com/parodius/gb-tests/) and are runnable, but some tests fail.
+Many tests ROM can be downloaded [here](https://github.com/c-sp/game-boy-test-roms) and are runnable, but some tests fail.
 See the Tests section for more details.
 
-Currently, most tested games run (tested with Tetris, Super Mario, Pokemon Red)
+Currently, most tested games run (tested with Tetris, Super Mario, Pokémon Red)
 but have some glitches.
 
 ### Run on a custom page
@@ -97,10 +97,10 @@ Other methods may be included (AJAX and Drag & Drop are supported).
 There is no boot program provided (nor supported).
 The execution starts automatically at address 0x0100 which is the start address of all ROMs.
 
-All of the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
+All the standard Gameboy instructions are implemented. Super Gameboy and Gameboy Color are not supported.
 
 The following features are in progress or partially working:
-* sprites (no support for sprite flags)
+* sprites (some glitches)
 * MBC (only MBC 1, MBC 3 and MBC 5 are partially supported)
 * sound (ok on Firefox, poor on Chrome)
 

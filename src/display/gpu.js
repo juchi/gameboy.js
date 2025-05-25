@@ -1,7 +1,7 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-var Screen;
+import Screen from './screen';
+import CPU from '../cpu';
+import Util from '../util';
+
 var GPU = function(screen, cpu) {
     this.cpu = cpu;
     this.screen = screen;
@@ -29,7 +29,6 @@ var GPU = function(screen, cpu) {
     this.mode = 2;
     this.line = 0;
 
-    Screen = GameboyJS.Screen;
     this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
     this.tileBuffer = new Array(8);
     this.bgTileCache = {};
@@ -56,7 +55,7 @@ GPU.prototype.update = function(clockElapsed) {
                 if (this.line == 144) {
                     this.setMode(1);
                     vblank = true;
-                    this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.VBLANK);
+                    this.cpu.requestInterrupt(CPU.INTERRUPTS.VBLANK);
                     this.drawFrame();
                 } else {
                     this.setMode(2);
@@ -99,7 +98,7 @@ GPU.prototype.updateLY = function() {
     if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
         this.deviceram(this.STAT, STAT | (1 << 2));
         if (STAT & (1 << 6)) {
-            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.LCDC);
         }
     } else {
         this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
@@ -115,7 +114,7 @@ GPU.prototype.setMode = function(mode) {
 
     if (mode < 3) {
         if (newSTAT & (1 << (3+mode))) {
-            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.LCDC);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.LCDC);
         }
     }
 };
@@ -123,7 +122,7 @@ GPU.prototype.setMode = function(mode) {
 // Push one scanline into the main buffer
 GPU.prototype.drawScanLine = function(line) {
     var LCDC = this.deviceram(this.LCDC);
-    var enable = GameboyJS.Util.readBit(LCDC, 7);
+    var enable = Util.readBit(LCDC, 7);
     if (enable) {
         var lineBuffer = new Array(Screen.physics.WIDTH);
         this.drawBackground(LCDC, line, lineBuffer);
@@ -134,7 +133,7 @@ GPU.prototype.drawScanLine = function(line) {
 
 GPU.prototype.drawFrame = function() {
     var LCDC = this.deviceram(this.LCDC);
-    var enable = GameboyJS.Util.readBit(LCDC, 7);
+    var enable = Util.readBit(LCDC, 7);
     if (enable) {
         //this.drawSprites(LCDC);
         this.drawWindow(LCDC);
@@ -144,14 +143,14 @@ GPU.prototype.drawFrame = function() {
 };
 
 GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
-    if (!GameboyJS.Util.readBit(LCDC, 0)) {
+    if (!Util.readBit(LCDC, 0)) {
         return;
     }
 
-    var mapStart = GameboyJS.Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+    var mapStart = Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
-    if (GameboyJS.Util.readBit(LCDC, 4)) {
+    if (Util.readBit(LCDC, 4)) {
         dataStart = 0x8000;
     } else {
         dataStart = 0x8800;
@@ -174,7 +173,7 @@ GPU.prototype.drawBackground = function(LCDC, line, lineBuffer) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
-            tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
+            tileIndex = Util.getSignedValue(tileIndex) + 128;
         }
 
         var tileData = this.readTileData(tileIndex, dataStart);
@@ -226,10 +225,10 @@ GPU.prototype.drawTileLine = function(tileData, line, xflip, yflip) {
 };
 
 GPU.prototype.drawSprites = function(LCDC, line, bgLineBuffer) {
-    if (!GameboyJS.Util.readBit(LCDC, 1)) {
+    if (!Util.readBit(LCDC, 1)) {
         return;
     }
-    var spriteHeight = GameboyJS.Util.readBit(LCDC, 2) ? 16 : 8;
+    var spriteHeight = Util.readBit(LCDC, 2) ? 16 : 8;
 
     var sprites = new Array();
     for (var i = this.OAM_START; i < this.OAM_END && sprites.length < 10; i += 4) {
@@ -255,10 +254,10 @@ GPU.prototype.drawSprites = function(LCDC, line, bgLineBuffer) {
     for (var i = 0; i < sprites.length; i++) {
         var sprite = sprites[i];
         var tileLine = line - sprite.y + 16;
-        var paletteNumber = GameboyJS.Util.readBit(sprite.flags, 4);
-        var xflip = GameboyJS.Util.readBit(sprite.flags, 5);
-        var yflip = GameboyJS.Util.readBit(sprite.flags, 6);
-        var priority = GameboyJS.Util.readBit(sprite.flags, 7);
+        var paletteNumber = Util.readBit(sprite.flags, 4);
+        var xflip = Util.readBit(sprite.flags, 5);
+        var yflip = Util.readBit(sprite.flags, 6);
+        var priority = Util.readBit(sprite.flags, 7);
         var tileData = cacheTile[sprite.index] || (cacheTile[sprite.index] = this.readTileData(sprite.index, 0x8000, spriteHeight * 2));
         this.drawTileLine(tileData, tileLine, xflip, yflip);
         this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber, priority, bgLineBuffer);
@@ -329,15 +328,15 @@ GPU.prototype.readTileData = function(tileIndex, dataStart, tileSize) {
 };
 
 GPU.prototype.drawWindow = function(LCDC) {
-    if (!GameboyJS.Util.readBit(LCDC, 5)) {
+    if (!Util.readBit(LCDC, 5)) {
         return;
     }
 
     var buffer = new Array(256*256);
-    var mapStart = GameboyJS.Util.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+    var mapStart = Util.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
 
     var dataStart, signedIndex = false;
-    if (GameboyJS.Util.readBit(LCDC, 4)) {
+    if (Util.readBit(LCDC, 4)) {
         dataStart = 0x8000;
     } else {
         dataStart = 0x8800;
@@ -349,7 +348,7 @@ GPU.prototype.drawWindow = function(LCDC) {
         var tileIndex = this.vram(i + mapStart);
 
         if (signedIndex) {
-            tileIndex = GameboyJS.Util.getSignedValue(tileIndex) + 128;
+            tileIndex = Util.getSignedValue(tileIndex) + 128;
         }
 
         var tileData = this.readTileData(tileIndex, dataStart);
@@ -388,5 +387,4 @@ GPU.getPalette = function(paletteByte) {
     return palette;
 };
 
-GameboyJS.GPU = GPU;
-}(GameboyJS || (GameboyJS = {})));
+export default GPU;

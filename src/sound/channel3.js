@@ -1,6 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
 var Channel3 = function(apu, channelNumber, audioContext) {
     this.apu = apu;
     this.channelNumber = channelNumber;
@@ -90,5 +87,5 @@ Channel3.prototype.disable = function() {
 Channel3.prototype.enable = function() {
     this.bufferSource.connect(this.gainNode);
 };
-GameboyJS.Channel3 = Channel3;
-}(GameboyJS || (GameboyJS = {})));
+
+export default Channel3;

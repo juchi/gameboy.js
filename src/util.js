@@ -1,6 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
 
 // Utility functions
 var Util = {
@@ -37,5 +34,4 @@ var Util = {
     }
 };
 
-GameboyJS.Util = Util;
-}(GameboyJS || (GameboyJS = {})));
+export default Util;

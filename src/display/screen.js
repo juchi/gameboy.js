@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // Screen device
 var Screen = function(canvas, pixelSize) {
     this.context = canvas.getContext('2d');
@@ -66,5 +62,4 @@ Screen.prototype.render = function(buffer) {
     this.context.putImageData(this.imageData, 0, 0);
 };
 
-GameboyJS.Screen = Screen;
-}(GameboyJS || (GameboyJS = {})));
+export default Screen;

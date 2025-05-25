@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // A RomFileReader is able to load a local file from an input element
 //
 // Expects to be provided a file input element,
@@ -41,5 +37,4 @@ RomFileReader.prototype.loadFromFile = function(file) {
     fr.readAsArrayBuffer(file);
 };
 
-GameboyJS.RomFileReader = RomFileReader;
-}(GameboyJS || (GameboyJS = {})));
+export default RomFileReader;

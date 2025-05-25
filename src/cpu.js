@@ -1,6 +1,11 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import Memory from './memory';
+import Timer from './timer';
+import APU from './sound/apu';
+import Screen from './display/screen';
+import Util from './util';
+import {ConsoleSerial} from './serial';
+import {cpuOps} from './instructions'
+import {opcodeMap} from './opcodes'
 
 // CPU class
 var CPU = function(gameboy) {
@@ -24,21 +29,21 @@ CPU.INTERRUPTS = {
     HILO:   4
 };
 CPU.interruptRoutines = {
-    0: function(p){GameboyJS.cpuOps.RSTn(p, 0x40);},
-    1: function(p){GameboyJS.cpuOps.RSTn(p, 0x48);},
-    2: function(p){GameboyJS.cpuOps.RSTn(p, 0x50);},
-    3: function(p){GameboyJS.cpuOps.RSTn(p, 0x58);},
-    4: function(p){GameboyJS.cpuOps.RSTn(p, 0x60);}
+    0: function(p){cpuOps.RSTn(p, 0x40);},
+    1: function(p){cpuOps.RSTn(p, 0x48);},
+    2: function(p){cpuOps.RSTn(p, 0x50);},
+    3: function(p){cpuOps.RSTn(p, 0x58);},
+    4: function(p){cpuOps.RSTn(p, 0x60);}
 };
 
 CPU.prototype.createDevices = function() {
-    this.memory = new GameboyJS.Memory(this);
-    this.timer = new GameboyJS.Timer(this, this.memory);
-    this.apu = new GameboyJS.APU(this.memory);
+    this.memory = new Memory(this);
+    this.timer = new Timer(this, this.memory);
+    this.apu = new APU(this.memory);
 
     this.SERIAL_INTERNAL_INSTR = 512; // instr to wait per bit if internal clock
     this.enableSerial = 0;
-    this.serialHandler = GameboyJS.ConsoleSerial;
+    this.serialHandler = ConsoleSerial;
 };
 
 CPU.prototype.reset = function() {
@@ -101,7 +106,7 @@ CPU.prototype.stop = function() {
 // The function is called on a regular basis with a timeout
 CPU.prototype.frame = function() {
     if (!this.isPaused) {
-        this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / GameboyJS.Screen.physics.FREQUENCY);
+        this.nextFrameTimer = setTimeout(this.frame.bind(this), 1000 / Screen.physics.FREQUENCY);
     }
 
     try {
@@ -110,7 +115,7 @@ CPU.prototype.frame = function() {
             var oldInstrCount = this.clock.c;
             if (!this.isHalted) {
                 var opcode = this.fetchOpcode();
-                GameboyJS.opcodeMap[opcode](this);
+                opcodeMap[opcode](this);
                 this.r.F &= 0xF0; // tmp fix
 
                 if (this.enableSerial) {
@@ -140,7 +145,7 @@ CPU.prototype.frame = function() {
 CPU.prototype.fetchOpcode = function() {
     var opcode = this.memory.rb(this.r.pc++);
     if (opcode === undefined) {console.log(opcode + ' at ' + (this.r.pc-1).toString(16));this.stop();return;}
-    if (!GameboyJS.opcodeMap[opcode]) {
+    if (!opcodeMap[opcode]) {
         console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
         this.stop();
         return null;
@@ -182,7 +187,7 @@ CPU.prototype.checkInterrupt = function() {
     }
     for (var i = 0; i < 5; i++) {
         var IFval = this.memory.rb(0xFF0F);
-        if (GameboyJS.Util.readBit(IFval, i) && this.isInterruptEnable(i)) {
+        if (Util.readBit(IFval, i) && this.isInterruptEnable(i)) {
             IFval &= (0xFF - (1<<i));
             this.memory.wb(0xFF0F, IFval);
             this.disableInterrupts();
@@ -202,7 +207,7 @@ CPU.prototype.requestInterrupt = function(type) {
 };
 
 CPU.prototype.isInterruptEnable = function(type) {
-    return GameboyJS.Util.readBit(this.memory.rb(0xFFFF), type) != 0;
+    return Util.readBit(this.memory.rb(0xFFFF), type) != 0;
 };
 
 CPU.prototype.enableInterrupts = function() {
@@ -228,5 +233,5 @@ CPU.prototype.endSerialTransfer = function() {
 CPU.prototype.resetDivTimer = function() {
     this.timer.resetDiv();
 };
-GameboyJS.CPU = CPU;
-}(GameboyJS || (GameboyJS = {})));
+
+export default CPU;

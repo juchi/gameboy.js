@@ -62,7 +62,7 @@ new GameboyJS.Gameboy(canvas, options);
 
 If you want to build the compiled JavaScript file from source
 to be sure you have the latest updates, just clone the repository
-and run the grunt tasks :
+and run the build script:
 
 ```
 git clone https://github.com/juchi/gameboy.js

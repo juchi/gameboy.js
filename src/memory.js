@@ -1,6 +1,4 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import MBC from './mbc';
 
 // Memory unit
 var Memory = function(cpu) {
@@ -44,7 +42,7 @@ Memory.prototype.reset = function() {
 Memory.prototype.setRomData = function(data) {
     this.rom = data;
     this.loadRomBank(0);
-    this.mbc = GameboyJS.MBC.getMbcInstance(this, this[0x147]);
+    this.mbc = MBC.getMbcInstance(this, this[0x147]);
     this.loadRomBank(1);
     this.mbc.loadRam(this.cpu.getGameName(), this.cpu.getRamSize());
 };
@@ -149,5 +147,4 @@ Memory.prototype.dmaTransfer = function(startAddressPrefix) {
     }
 };
 
-GameboyJS.Memory = Memory;
-}(GameboyJS || (GameboyJS = {})));
+export default Memory;

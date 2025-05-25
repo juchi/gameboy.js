@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // Handlers for the Serial port of the Gameboy
 
 // The ConsoleSerial is an output-only serial port
@@ -30,7 +26,6 @@ var ConsoleSerial = {
         ConsoleSerial.current = '';
     }
 };
-GameboyJS.ConsoleSerial = ConsoleSerial;
 
 // A DummySerial outputs nothing and always inputs 0xFF
 var DummySerial = {
@@ -39,5 +34,5 @@ var DummySerial = {
         return 0xFF;
     }
 };
-GameboyJS.DummySerial = DummySerial;
-}(GameboyJS || (GameboyJS = {})));
+
+export {ConsoleSerial, DummySerial};

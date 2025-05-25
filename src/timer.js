@@ -1,6 +1,4 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import CPU from './cpu';
 
 var Timer = function(cpu, memory) {
     this.cpu    = cpu;
@@ -41,7 +39,7 @@ Timer.prototype.updateTimer = function(clockElapsed) {
         this.memory.wb(this.TIMA, this.memory.rb(this.TIMA) + 1);
         if (this.memory.rb(this.TIMA) > 0xFF) {
             this.memory.wb(this.TIMA, this.memory.rb(this.TMA));
-            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.TIMER);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.TIMER);
         }
     }
 };
@@ -62,5 +60,5 @@ Timer.prototype.resetDiv = function() {
     this.divTime = 0;
     this.memory[this.DIV] = 0; // direct write to avoid looping
 };
-GameboyJS.Timer = Timer;
-}(GameboyJS || (GameboyJS = {})));
+
+export default Timer;

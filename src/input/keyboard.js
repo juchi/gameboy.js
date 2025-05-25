@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // Keyboard listener
 // Does the mapping between the keyboard and the Input class
 var Keyboard = function() {};
@@ -74,5 +70,5 @@ Keyboard.prototype.translateKey = function(keycode) {
 
     return key;
 };
-GameboyJS.Keyboard = Keyboard;
-}(GameboyJS || (GameboyJS = {})));
+
+export default Keyboard;

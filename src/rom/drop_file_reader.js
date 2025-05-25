@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // A RomDropFileReader is able to load a drag and dropped file
 var RomDropFileReader = function(el) {
     this.dropElement = el;
@@ -61,5 +57,4 @@ RomDropFileReader.prototype.loadFromFile = function(file) {
     fr.readAsArrayBuffer(file);
 };
 
-GameboyJS.RomDropFileReader = RomDropFileReader;
-}(GameboyJS || (GameboyJS = {})));
+export default RomDropFileReader;

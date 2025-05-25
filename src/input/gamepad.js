@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // This is the default buttons mapping for the Gamepad API
 //
 // Any other mapping can be provided as a constructor argument of the Gamepad object
@@ -78,5 +74,4 @@ Gamepad.prototype.manageRelease = function(key) {
     this.onRelease(key);
 };
 
-GameboyJS.Gamepad = Gamepad;
-}(GameboyJS || (GameboyJS = {})));
+export default Gamepad;

@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // Object for mapping the cartridge RAM
 var ExtRam = function() {
     this.extRam = null;
@@ -46,5 +42,5 @@ ExtRam.prototype.getStorageKey = function() {
 ExtRam.prototype.saveRamData = function() {
     localStorage.setItem(this.getStorageKey(), JSON.stringify(this.extRam));
 };
-GameboyJS.ExtRam = ExtRam;
-}(GameboyJS || (GameboyJS = {})));
+
+export default ExtRam;

@@ -1,6 +1,5 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import Util from './util';
+import {cpuOps} from './instructions';
 
 var Debug = {};
 // Output a range of 16 memory addresses
@@ -28,9 +27,9 @@ Debug.view_tile = function(gameboy, index, dataStart) {
     var LCDC = screen.deviceram(screen.LCDC);
     if (typeof dataStart === 'undefined') {
         dataStart = 0x8000;
-        if (!GameboyJS.Util.readBit(LCDC, 4)) {
+        if (!Util.readBit(LCDC, 4)) {
             dataStart = 0x8800;
-            index = GameboyJS.cpuOps._getSignedValue(index) + 128;
+            index = cpuOps._getSignedValue(index) + 128;
         }
     }
 
@@ -69,5 +68,5 @@ Debug.list_visible_sprites = function(gameboy) {
 
     return indexes;
 };
-GameboyJS.Debug = Debug;
-}(GameboyJS || (GameboyJS = {})));
+
+export default Debug;

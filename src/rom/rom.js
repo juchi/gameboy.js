@@ -1,8 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
-
 var Rom = function(gameboy, romReader) {
     this.gameboy = gameboy;
     if (romReader) {
@@ -29,7 +24,6 @@ function validate(data) {
         hash = hash - data[i] - 1;
     }
     return (hash & 0xFF) == data[0x14D];
-};
+}
 
-GameboyJS.Rom = Rom;
-}(GameboyJS || (GameboyJS = {})));
+export default Rom;

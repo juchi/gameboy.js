@@ -1,7 +1,3 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
-
 // A RomAjaxReader is able to load a file through an AJAX request
 var RomAjaxReader = function() {
 
@@ -32,5 +28,4 @@ RomAjaxReader.prototype.loadFromUrl = function(url) {
     xhr.send();
 };
 
-GameboyJS.RomAjaxReader = RomAjaxReader;
-}(GameboyJS || (GameboyJS = {})));
+export default RomAjaxReader;

@@ -1,6 +1,6 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import Channel1 from './channel1';
+import Channel3 from './channel3';
+import Channel4 from './channel4';
 
 // Audio Processing unit
 // Listens the write accesses to the audio-reserved memory addresses
@@ -12,10 +12,10 @@ var APU = function(memory) {
     var AudioContext = window.AudioContext || window.webkitAudioContext;
     var audioContext = new AudioContext();
 
-    this.channel1 = new GameboyJS.Channel1(this, 1, audioContext);
-    this.channel2 = new GameboyJS.Channel1(this, 2, audioContext);
-    this.channel3 = new GameboyJS.Channel3(this, 3, audioContext);
-    this.channel4 = new GameboyJS.Channel4(this, 4, audioContext);
+    this.channel1 = new Channel1(this, 1, audioContext);
+    this.channel2 = new Channel1(this, 2, audioContext);
+    this.channel3 = new Channel3(this, 3, audioContext);
+    this.channel4 = new Channel4(this, 4, audioContext);
 
 };
 APU.prototype.connect = function() {
@@ -212,5 +212,5 @@ APU.registers = {
     NR51: 0xFF25,
     NR52: 0xFF26
 };
-GameboyJS.APU = APU;
-}(GameboyJS || (GameboyJS = {})));
+
+export default APU;

@@ -1,6 +1,4 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import CPU from '../cpu';
 
 // The Input management system
 //
@@ -55,7 +53,7 @@ Input.prototype.update = function() {
         if (this.interruptQueue[0].ly === this.memory.rb(this.cpu.gpu.LY)) {
             let v = this.interruptQueue.shift();
             this.state |= Input.keys[v.key];
-            this.cpu.requestInterrupt(GameboyJS.CPU.INTERRUPTS.HILO);
+            this.cpu.requestInterrupt(CPU.INTERRUPTS.HILO);
         }
     }
 
@@ -72,5 +70,5 @@ Input.prototype.update = function() {
     value = ((~value) & 0x3F); // invert back
     this.memory[this.P1] = value;
 };
-GameboyJS.Input = Input;
-}(GameboyJS || (GameboyJS = {})));
+
+export default Input;

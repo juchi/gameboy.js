@@ -1,12 +1,9 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import {cpuOps as ops} from './instructions';
 
-var ops = GameboyJS.cpuOps;
 // Each opcode (0 to 0xFF) is associated to a CPU operation
 // CPU operations are implemented separately
 // The cbmap object holds operations for CB prefixed opcodes (0xCB00 to 0xCBFF)
-// Non existent opcodes are commented out and marked empty
+// Non-existent opcodes are commented out and marked empty
 var map = {
     0x00: function(p){p.clock.c += 4;},
     0x01: function(p){ops.LDrrnn(p, 'B', 'C');},
@@ -554,6 +551,5 @@ var cbmap = {
     0xFE: function(p){ops.SETirra(p, 7, 'H', 'L');},
     0xFF: function(p){ops.SETir(p, 7, 'A');}
 };
-GameboyJS.opcodeMap = map;
-GameboyJS.opcodeCbmap = cbmap;
-}(GameboyJS || (GameboyJS = {})));
+
+export {map as opcodeMap, cbmap as opcodeCbmap};

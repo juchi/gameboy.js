@@ -1,9 +1,17 @@
-var GameboyJS;
-(function (GameboyJS) {
-"use strict";
+import Rom from './rom/rom';
+import RomFileReader from './rom/file_reader';
+import RomDropFileReader from './rom/drop_file_reader';
+import Keyboard from './input/keyboard';
+import Util from './util';
+import CPU from './cpu';
+import GPU from './display/gpu';
+import Screen from './display/screen';
+import Input from './input/input';
+import UnimplementedException from './exception';
+import Debug from './debug';
 
 var defaultOptions = {
-    pad: {class: GameboyJS.Keyboard, mapping: null},
+    pad: {class: Keyboard, mapping: null},
     zoom: 1,
     romReaders: [],
     statusContainerId: 'status',
@@ -18,15 +26,15 @@ var defaultOptions = {
 // and provide information where needed
 var Gameboy = function(canvas, options) {
     options = options || {};
-    this.options = GameboyJS.Util.extend({}, defaultOptions, options);
+    this.options = Util.extend({}, defaultOptions, options);
 
-    var cpu = new GameboyJS.CPU(this);
-    var screen = new GameboyJS.Screen(canvas, this.options.zoom);
-    var gpu = new GameboyJS.GPU(screen, cpu);
+    var cpu = new CPU(this);
+    var screen = new Screen(canvas, this.options.zoom);
+    var gpu = new GPU(screen, cpu);
     cpu.gpu = gpu;
 
     var pad = new this.options.pad.class(this.options.pad.mapping);
-    var input = new GameboyJS.Input(cpu, pad, canvas);
+    var input = new Input(cpu, pad, canvas);
     cpu.input = input;
 
     this.cpu = cpu;
@@ -43,10 +51,10 @@ var Gameboy = function(canvas, options) {
 
 // Create the ROM object and bind one or more readers
 Gameboy.prototype.createRom = function (readers) {
-    var rom = new GameboyJS.Rom(this);
+    var rom = new Rom(this);
     if (readers.length == 0) {
         // add the default rom reader
-        var romReader = new GameboyJS.RomFileReader();
+        var romReader = new RomFileReader();
         rom.addReader(romReader);
     } else {
         for (var i in readers) {
@@ -110,7 +118,7 @@ Gameboy.prototype.setScreenZoom = function(value) {
     this.screen.setPixelSize(value);
 };
 Gameboy.prototype.handleException = function(e) {
-    if (e instanceof GameboyJS.UnimplementedException) {
+    if (e instanceof UnimplementedException) {
         if (e.fatal) {
             this.error('This cartridge is not supported ('+ e.message +')');
         } else {
@@ -120,5 +128,11 @@ Gameboy.prototype.handleException = function(e) {
         throw e;
     }
 };
-GameboyJS.Gameboy = Gameboy;
-}(GameboyJS || (GameboyJS = {})));
+
+export {
+    Gameboy,
+    RomFileReader,
+    RomDropFileReader,
+    Util,
+    Debug
+};

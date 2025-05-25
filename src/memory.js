@@ -37,6 +37,8 @@ Memory.prototype.reset = function() {
         this[i] = 0;
     }
     this[0xFFFF] = 0;
+    this[0xFF47] = 0xFC;
+    this[0xFF04] = 0x18;
 };
 
 Memory.prototype.setRomData = function(data) {

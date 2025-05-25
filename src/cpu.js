@@ -48,8 +48,7 @@ CPU.prototype.createDevices = function() {
 
 CPU.prototype.reset = function() {
     this.memory.reset();
-
-    this.r.sp = 0xFFFE;
+    this.r = {A:0x01, F: 0, B:0xFF, C:0x13, D:0, E:0xC1, H:0x84, L:0x03, pc:0, sp:0xFFFE};
 };
 
 CPU.prototype.loadRom = function(data) {

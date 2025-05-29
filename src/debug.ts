@@ -1,8 +1,9 @@
+import {Gameboy} from './main';
 import Util from './util';
 
 let Debug: any = {};
 // Output a range of 16 memory addresses
-Debug.view_memory = function(addr: number, gameboy): string {
+Debug.view_memory = function(addr: number, gameboy: Gameboy): string {
     let memory = gameboy.cpu.memory;
     addr = addr & 0xFFF0;
     let pad = '00';
@@ -19,10 +20,10 @@ Debug.view_memory = function(addr: number, gameboy): string {
     return str;
 };
 
-Debug.view_tile = function(gameboy, index: number, dataStart?: number): void {
+Debug.view_tile = function(gameboy: Gameboy, index: number, dataStart?: number): void {
     let memory = gameboy.cpu.memory;
-    let screen = gameboy.screen;
-    let LCDC = memory.deviceram(screen.LCDC);
+    let gpu = gameboy.cpu.gpu;
+    let LCDC = memory.deviceram(gpu.LCDC);
     if (typeof dataStart === 'undefined') {
         dataStart = 0x8000;
         if (!Util.readBit(LCDC, 4)) {
@@ -51,7 +52,7 @@ Debug.view_tile = function(gameboy, index: number, dataStart?: number): void {
     }
 };
 
-Debug.list_visible_sprites = function(gameboy) {
+Debug.list_visible_sprites = function(gameboy: Gameboy) {
     let memory = gameboy.cpu.memory;
     let indexes = [];
     for (let i = 0xFE00; i < 0xFE9F; i += 4) {

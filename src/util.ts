@@ -1,3 +1,5 @@
+import CPU from './cpu';
+
 // Utility functions
 let Util = {
     // Add to the first argument the properties of all other arguments
@@ -12,14 +14,14 @@ let Util = {
 
         return target;
     },
-    testFlag: function(p, cc) {
+    testFlag: function(p: CPU, cc: string) {
         let test: number = 1;
         let mask: number = 0x10;
         if (cc == 'NZ' || cc == 'NC') test = 0;
         if (cc == 'NZ' || cc == 'Z')  mask = 0x80;
         return (test && p.r.F & mask) || (!test && !(p.r.F & mask));
     },
-    getRegAddr: function(p, r1, r2) {
+    getRegAddr: function(p: CPU, r1: string, r2: string) {
         return Util.makeword(p.r[r1], p.r[r2]);
     },
 

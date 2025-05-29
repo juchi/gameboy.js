@@ -1,0 +1,396 @@
+import Screen from './screen';
+import CPU from '../cpu';
+import Util from '../util';
+
+class GPU {
+    LCDC= 0xFF40;
+    STAT= 0xFF41;
+    SCY = 0xFF42;
+    SCX = 0xFF43;
+    LY  = 0xFF44;
+    LYC = 0xFF45;
+    BGP = 0xFF47;
+    OBP0= 0xFF48;
+    OBP1= 0xFF49;
+    WY  = 0xFF4A;
+    WX  = 0xFF4B;
+
+    OAM_START = 0xFE00;
+    OAM_END   = 0xFE9F;
+    VBLANK_TIME = 70224;
+
+    cpu;
+    screen;
+    vram;
+    deviceram;
+    oamram;
+    clock;
+    mode;
+    line;
+    buffer;
+    tileBuffer;
+
+    constructor(screen, cpu) {
+        this.cpu = cpu;
+        this.screen = screen;
+        this.vram = cpu.memory.vram.bind(cpu.memory);
+        this.deviceram = cpu.memory.deviceram.bind(cpu.memory);
+        this.oamram = cpu.memory.oamram.bind(cpu.memory);
+        this.clock = 0;
+        this.mode = 2;
+        this.line = 0;
+        this.buffer = new Array(Screen.physics.WIDTH * Screen.physics.HEIGHT);
+        this.tileBuffer = new Array(8);
+    }
+
+    static tilemap = {
+        HEIGHT: 32,
+        WIDTH: 32,
+        START_0: 0x9800,
+        START_1: 0x9C00,
+        LENGTH: 0x0400 // 1024 bytes = 32*32
+    };
+
+    update(clockElapsed) {
+        this.clock += clockElapsed;
+        var vblank = false;
+
+        switch (this.mode) {
+            case 0: // HBLANK
+                if (this.clock >= 204) {
+                    this.clock -= 204;
+                    this.line++;
+                    this.updateLY();
+                    if (this.line == 144) {
+                        this.setMode(1);
+                        vblank = true;
+                        this.cpu.requestInterrupt(CPU.INTERRUPTS.VBLANK);
+                        this.drawFrame();
+                    } else {
+                        this.setMode(2);
+                    }
+                }
+                break;
+            case 1: // VBLANK
+                if (this.clock >= 456) {
+                    this.clock -= 456;
+                    this.line++;
+                    if (this.line > 153) {
+                        this.line = 0;
+                        this.setMode(2);
+                    }
+                    this.updateLY();
+                }
+
+                break;
+            case 2: // SCANLINE OAM
+                if (this.clock >= 80) {
+                    this.clock -= 80;
+                    this.setMode(3);
+                }
+                break;
+            case 3: // SCANLINE VRAM
+                if (this.clock >= 172) {
+                    this.clock -= 172;
+                    this.drawScanLine(this.line);
+                    this.setMode(0);
+                }
+                break;
+        }
+
+        return vblank;
+    }
+
+    updateLY() {
+        this.deviceram(this.LY, this.line);
+        var STAT = this.deviceram(this.STAT);
+        if (this.deviceram(this.LY) == this.deviceram(this.LYC)) {
+            this.deviceram(this.STAT, STAT | (1 << 2));
+            if (STAT & (1 << 6)) {
+                this.cpu.requestInterrupt(CPU.INTERRUPTS.LCDC);
+            }
+        } else {
+            this.deviceram(this.STAT, STAT & (0xFF - (1 << 2)));
+        }
+    }
+
+    setMode(mode) {
+        this.mode = mode;
+        var newSTAT = this.deviceram(this.STAT);
+        newSTAT &= 0xFC;
+        newSTAT |= mode;
+        this.deviceram(this.STAT, newSTAT);
+
+        if (mode < 3) {
+            if (newSTAT & (1 << (3+mode))) {
+                this.cpu.requestInterrupt(CPU.INTERRUPTS.LCDC);
+            }
+        }
+    }
+
+    // Push one scanline into the main buffer
+    drawScanLine(line) {
+        var LCDC = this.deviceram(this.LCDC);
+        var enable = Util.readBit(LCDC, 7);
+        if (enable) {
+            var lineBuffer = new Array(Screen.physics.WIDTH);
+            this.drawBackground(LCDC, line, lineBuffer);
+            this.drawSprites(LCDC, line, lineBuffer);
+            // TODO draw a line for the window here too
+        }
+    }
+
+    drawFrame() {
+        var LCDC = this.deviceram(this.LCDC);
+        var enable = Util.readBit(LCDC, 7);
+        if (enable) {
+            //this.drawSprites(LCDC);
+            this.drawWindow(LCDC);
+        }
+        this.screen.render(this.buffer);
+    }
+
+    drawBackground(LCDC, line, lineBuffer) {
+        if (!Util.readBit(LCDC, 0)) {
+            return;
+        }
+
+        var mapStart = Util.readBit(LCDC, 3) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+
+        var dataStart, signedIndex = false;
+        if (Util.readBit(LCDC, 4)) {
+            dataStart = 0x8000;
+        } else {
+            dataStart = 0x8800;
+            signedIndex = true;
+        }
+
+        var bgx = this.deviceram(this.SCX);
+        var bgy = this.deviceram(this.SCY);
+        var tileLine = ((line + bgy) & 7);
+
+        // browse BG tilemap for the line to render
+        var tileRow = ((((bgy + line) / 8) | 0) & 0x1F);
+        var firstTile = ((bgx / 8) | 0) + 32 * tileRow;
+        var lastTile = firstTile + Screen.physics.WIDTH / 8 + 1;
+        if ((lastTile & 0x1F) < (firstTile & 0x1F)) {
+            lastTile -= 32;
+        }
+        var x = (firstTile & 0x1F) * 8 - bgx; // x position of the first tile's leftmost pixel
+        for (var i = firstTile; i != lastTile; i++, (i & 0x1F) == 0 ? i-=32 : null) {
+            var tileIndex = this.vram(i + mapStart);
+
+            if (signedIndex) {
+                tileIndex = Util.getSignedValue(tileIndex) + 128;
+            }
+
+            var tileData = this.readTileData(tileIndex, dataStart);
+
+            this.drawTileLine(tileData, tileLine);
+            this.copyBGTileLine(lineBuffer, this.tileBuffer, x);
+            x += 8;
+        }
+
+        this.copyLineToBuffer(lineBuffer, line);
+    }
+
+    // Copy a tile line from a tileBuffer to a line buffer, at a given x position
+    copyBGTileLine(lineBuffer, tileBuffer, x) {
+        // copy tile line to buffer
+        for (var k = 0; k < 8; k++, x++) {
+            if (x < 0 || x >= Screen.physics.WIDTH) continue;
+            lineBuffer[x] = tileBuffer[k];
+        }
+    }
+
+    // Copy a scanline into the main buffer
+    copyLineToBuffer(lineBuffer, line) {
+        var bgPalette = GPU.getPalette(this.deviceram(this.BGP));
+
+        for (var x = 0; x < Screen.physics.WIDTH; x++) {
+            var color = lineBuffer[x];
+            this.drawPixel(x, line, bgPalette[color]);
+        }
+    }
+
+    // Write a line of a tile (8 pixels) into a buffer array
+    drawTileLine(tileData, line: number, xflip = 0, yflip = 0) {
+        var l = yflip ? 7 - line : line;
+        var byteIndex = l * 2;
+        var b1 = tileData[byteIndex++];
+        var b2 = tileData[byteIndex++];
+
+        var offset = 8;
+        for (var pixel = 0; pixel < 8; pixel++) {
+            offset--;
+            var mask = (1 << offset);
+            var colorValue = ((b1 & mask) >> offset) + ((b2 & mask) >> offset)*2;
+            var p = xflip ? offset : pixel;
+            this.tileBuffer[p] = colorValue;
+        }
+    }
+
+    drawSprites(LCDC, line, bgLineBuffer) {
+        if (!Util.readBit(LCDC, 1)) {
+            return;
+        }
+        var spriteHeight = Util.readBit(LCDC, 2) ? 16 : 8;
+
+        var sprites = new Array();
+        for (var i = this.OAM_START; i < this.OAM_END && sprites.length < 10; i += 4) {
+            var y = this.oamram(i);
+            var x = this.oamram(i+1);
+            var index = this.oamram(i+2);
+            if (spriteHeight === 16) index = index & 0xFE;
+            var flags = this.oamram(i+3);
+
+            if (y - 16 > line || y - 16 < line - spriteHeight) {
+                continue;
+            }
+            sprites.push({x:x, y:y, index:index, flags:flags})
+        }
+        sprites.sort((a, b) => a.x - b.x);
+
+        if (sprites.length == 0) return;
+
+        // cache object to store read tiles from this frame
+        var cacheTile = {};
+        var spriteLineBuffer = new Array(Screen.physics.WIDTH);
+
+        for (var i = 0; i < sprites.length; i++) {
+            var sprite = sprites[i];
+            var tileLine = line - sprite.y + 16;
+            var paletteNumber = Util.readBit(sprite.flags, 4);
+            var xflip = Util.readBit(sprite.flags, 5);
+            var yflip = Util.readBit(sprite.flags, 6);
+            var priority = Util.readBit(sprite.flags, 7);
+            var tileData = cacheTile[sprite.index] || (cacheTile[sprite.index] = this.readTileData(sprite.index, 0x8000, spriteHeight * 2));
+            this.drawTileLine(tileData, tileLine, xflip, yflip);
+            this.copySpriteTileLine(spriteLineBuffer, this.tileBuffer, sprite.x - 8, paletteNumber, priority, bgLineBuffer);
+        }
+
+        this.copySpriteLineToBuffer(spriteLineBuffer, line);
+    }
+
+    // Copy a tile line from a tileBuffer to a line buffer, at a given x position
+    copySpriteTileLine = function(lineBuffer, tileBuffer, x, palette, priority, bgLineBuffer) {
+        // copy tile line to buffer
+        for (var k = 0; k < 8; k++, x++) {
+            if (x < 0 || x >= Screen.physics.WIDTH || tileBuffer[k] == 0) continue;
+            if (lineBuffer[x]) continue;
+            if (priority === 1 && bgLineBuffer[x] > 0) {
+                lineBuffer[x] = {color:0, palette: palette};
+                continue;
+            }
+            lineBuffer[x] = {color:tileBuffer[k], palette: palette};
+        }
+    }
+
+    // Copy a sprite scanline into the main buffer
+    copySpriteLineToBuffer(spriteLineBuffer, line) {
+        var spritePalettes = {};
+        spritePalettes[0] = GPU.getPalette(this.deviceram(this.OBP0));
+        spritePalettes[1] = GPU.getPalette(this.deviceram(this.OBP1));
+
+        for (var x = 0; x < Screen.physics.WIDTH; x++) {
+            if (!spriteLineBuffer[x]) continue;
+            var color = spriteLineBuffer[x].color;
+            if (color === 0) continue;
+            var paletteNumber = spriteLineBuffer[x].palette;
+            this.drawPixel(x, line, spritePalettes[paletteNumber][color]);
+        }
+    }
+
+    drawTile(tileData, x, y, buffer, bufferWidth, xflip = 0, yflip = 0) {
+        var byteIndex = 0;
+        for (var line = 0; line < 8; line++) {
+            var l = yflip ? 7 - line : line;
+            var b1 = tileData[byteIndex++];
+            var b2 = tileData[byteIndex++];
+
+            for (var pixel = 0; pixel < 8; pixel++) {
+                var mask = (1 << (7-pixel));
+                var colorValue = ((b1 & mask) >> (7-pixel)) + ((b2 & mask) >> (7-pixel))*2;
+                var p = xflip ? 7 - pixel : pixel;
+                var bufferIndex = (x + p) + (y + l) * bufferWidth;
+                buffer[bufferIndex] = colorValue;
+            }
+        }
+    }
+
+    // get an array of tile bytes data (16 entries for 8*8px)
+    readTileData(tileIndex: number, dataStart: number, tileSize?: number) {
+        tileSize = tileSize || 0x10; // 16 bytes / tile by default (8*8 px)
+        var tileData = new Array();
+
+        var tileAddressStart = dataStart + (tileIndex * 0x10);
+        for (var i = tileAddressStart; i < tileAddressStart + tileSize; i++) {
+            tileData.push(this.vram(i));
+        }
+
+        return tileData;
+    }
+
+    drawWindow(LCDC) {
+        if (!Util.readBit(LCDC, 5)) {
+            return;
+        }
+
+        var buffer = new Array(256*256);
+        var mapStart = Util.readBit(LCDC, 6) ? GPU.tilemap.START_1 : GPU.tilemap.START_0;
+
+        var dataStart, signedIndex = false;
+        if (Util.readBit(LCDC, 4)) {
+            dataStart = 0x8000;
+        } else {
+            dataStart = 0x8800;
+            signedIndex = true;
+        }
+
+        // browse Window tilemap
+        for (var i = 0; i < GPU.tilemap.LENGTH; i++) {
+            var tileIndex = this.vram(i + mapStart);
+
+            if (signedIndex) {
+                tileIndex = Util.getSignedValue(tileIndex) + 128;
+            }
+
+            var tileData = this.readTileData(tileIndex, dataStart);
+            var x = i % GPU.tilemap.WIDTH;
+            var y = (i / GPU.tilemap.WIDTH) | 0;
+            this.drawTile(tileData, x * 8, y * 8, buffer, 256);
+        }
+
+        var wx = this.deviceram(this.WX) - 7;
+        var wy = this.deviceram(this.WY);
+        for (var x = Math.max(0, -wx); x < Math.min(Screen.physics.WIDTH, Screen.physics.WIDTH - wx); x++) {
+            for (var y = Math.max(0, -wy); y < Math.min(Screen.physics.HEIGHT, Screen.physics.HEIGHT - wy); y++) {
+                var color = buffer[(x & 255) + (y & 255) * 256];
+                this.drawPixel(x + wx, y + wy, color);
+            }
+        }
+    }
+
+    drawPixel(x, y, color) {
+        this.buffer[y * 160 + x] = color;
+    }
+
+    getPixel(x, y) {
+        return this.buffer[y * 160 + x];
+    }
+
+    // Get the palette mapping from a given palette byte as stored in memory
+    // A palette will map a tile color to a final palette color index
+    // used with Screen.colors to get a shade of grey
+    static getPalette(paletteByte) {
+        var palette = [];
+        for (var i = 0; i < 8; i += 2) {
+            var shade = (paletteByte & (3 << i)) >> i;
+            palette.push(shade);
+        }
+        return palette;
+    }
+}
+
+
+export default GPU;

@@ -4,7 +4,7 @@ import {cpuOps as ops} from './instructions';
 // CPU operations are implemented separately
 // The cbmap object holds operations for CB prefixed opcodes (0xCB00 to 0xCBFF)
 // Non-existent opcodes are commented out and marked empty
-var map = {
+let map = {
     0x00: function(p){p.clock.c += 4;},
     0x01: function(p){ops.LDrrnn(p, 'B', 'C');},
     0x02: function(p){ops.LDrrar(p, 'B', 'C', 'A');},

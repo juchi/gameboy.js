@@ -16,7 +16,7 @@ import {opcodeCbmap} from './opcodes';
 // they should not be called from outside
 //
 // It's up to each operation to update the CPU clock
-var ops = {
+let ops = {
     LDrrnn: function(p, r1, r2) {p.wr(r2, p.memory.rb(p.r.pc));p.wr(r1, p.memory.rb(p.r.pc+1)); p.r.pc+=2;p.clock.c += 12;},
     LDrrar: function(p, r1, r2, r3) {ops._LDav(p, Util.getRegAddr(p, r1, r2), p.r[r3]);p.clock.c += 8;},
     LDrrra: function(p, r1, r2, r3) {p.wr(r1, p.memory.rb(Util.getRegAddr(p, r2, r3)));p.clock.c += 8;},

@@ -91,7 +91,7 @@ class Memory extends Array {
 
     // Memory read proxy function
     // Used to centralize memory read access
-    rb(addr) {
+    rb(addr: number): number {
         if (addr >= 0xFF10 && addr < 0xFF40) {
             var mask = apuMask[addr - 0xFF10];
             return this[addr] | mask;
@@ -105,7 +105,7 @@ class Memory extends Array {
     // Memory write proxy function
     // Used to centralize memory writes and delegate specific behaviour
     // to the correct units
-    wb(addr, value) {
+    wb(addr: number, value: number) {
         if (addr < 0x8000 || (addr >= 0xA000 && addr < 0xC000)) { // MBC
             this.mbc.manageWrite(addr, value);
         } else if (addr >= 0xFF10 && addr <= 0xFF3F) { // sound registers

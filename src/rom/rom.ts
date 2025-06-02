@@ -9,7 +9,7 @@ class Rom {
         }
     }
 
-    addReader(romReader) {
+    addReader(romReader: RomReader) {
         let self = this;
         romReader.setCallback(function(data: Uint8Array) {
             if (!validate(data)) {
@@ -30,6 +30,10 @@ function validate(data: Uint8Array) {
         hash = hash - data[i] - 1;
     }
     return (hash & 0xFF) == data[0x14D];
+}
+
+export interface RomReader {
+    setCallback(fn: Function): void;
 }
 
 export default Rom;

@@ -2,11 +2,8 @@ import APU from './apu';
 import {AbstractAudioChannel} from './channel';
 
 class Channel3 extends AbstractAudioChannel {
-    soundLength = 0;
     soundLengthUnit = 0x4000; // 1 / 256 second of instructions
-    lengthCheck = false;
 
-    clockLength = 0;
     buffer;
     gainNode;
     baseSpeed = 65536;
@@ -54,23 +51,10 @@ class Channel3 extends AbstractAudioChannel {
     };
     updateDAC(controlRegister) {
         this.setDAC((controlRegister & 0x80) > 0);
-    };
-    setDAC(value) {
-        this.dac = value;
-        if (!value) this.stop();
     }
+
     update(clockElapsed) {
-        if (this.lengthCheck){
-            this.clockLength  += clockElapsed;
-            if (this.clockLength > this.soundLengthUnit) {
-                this.soundLength--;
-                this.clockLength -= this.soundLengthUnit;
-                if (this.soundLength == 0) {
-                    this.setLength(0);
-                    this.stop();
-                }
-            }
-        }
+        this.checkLength(clockElapsed);
     }
     setFrequency(value) {
         value = 65536 / (2048  - value);

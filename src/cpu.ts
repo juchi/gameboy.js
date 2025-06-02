@@ -128,7 +128,7 @@ class CPU {
             while (!vblank) {
                 var oldInstrCount = this.clock.c;
                 if (!this.isHalted) {
-                    var opcode = this.fetchOpcode();
+                    let opcode = this.fetchOpcode();
                     opcodeMap[opcode](this);
                     this.r.F &= 0xF0; // tmp fix
 
@@ -156,13 +156,12 @@ class CPU {
         }
     }
 
-    fetchOpcode() {
-        var opcode = this.memory.rb(this.r.pc++);
-        if (opcode === undefined) {console.log(opcode + ' at ' + (this.r.pc-1).toString(16));this.stop();return;}
+    fetchOpcode(): number {
+        let opcode = this.memory.rb(this.r.pc++);
+
         if (!opcodeMap[opcode]) {
-            console.error('Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...');
             this.stop();
-            return null;
+            throw 'Unknown opcode '+opcode.toString(16)+' at address '+(this.r.pc-1).toString(16)+', stopping execution...';
         }
 
         return opcode;

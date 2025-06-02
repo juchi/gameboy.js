@@ -1,25 +1,24 @@
 // Object for mapping the cartridge RAM
 class ExtRam {
     gameName: string;
-    extRam: Array<number>;
+    extRam: number[];
     ramSize: number;
     ramBanksize: number;
     ramBank: number;
 
     constructor() {
-        this.extRam = null;
         this.ramSize = 0;
         this.ramBank = 0;
     }
 
-    loadRam(game, size) {
+    loadRam(game: string, size: number) {
         this.gameName = game;
 
         this.ramSize = size;
         this.ramBanksize = this.ramSize >= 0x2000 ? 8192 : 2048;
 
-        var key = this.getStorageKey();
-        var data = localStorage.getItem(key);
+        let key = this.getStorageKey();
+        let data = localStorage.getItem(key);
         if (data == null) {
             this.extRam = Array.apply(null, new Array(this.ramSize)).map(function(){return 0;});
         } else {
@@ -30,15 +29,15 @@ class ExtRam {
         }
     }
 
-    setRamBank(bank) {
+    setRamBank(bank: number) {
         this.ramBank = bank;
     }
 
-    manageWrite(offset, value) {
+    manageWrite(offset: number, value: number) {
         this.extRam[this.ramBank * 8192 + offset] = value;
     }
 
-    manageRead(offset) {
+    manageRead(offset: number) {
         return this.extRam[this.ramBank * 8192 + offset];
     }
 

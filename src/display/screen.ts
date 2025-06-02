@@ -6,7 +6,7 @@ class Screen {
     imageData: ImageData;
 
     constructor(canvas: HTMLCanvasElement, pixelSize: number) {
-        this.context = canvas.getContext('2d');
+        this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
         this.canvas = canvas;
         this.pixelSize = pixelSize || 1;
         this.initImageData();

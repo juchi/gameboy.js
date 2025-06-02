@@ -1,4 +1,5 @@
 import CPU from './cpu';
+import Memory from './memory'
 
 class Timer {
     DIV  = 0xFF04;
@@ -8,10 +9,10 @@ class Timer {
 
     mainTime  = 0;
     divTime   = 0;
-    cpu;
-    memory;
+    cpu: CPU;
+    memory: Memory;
 
-    constructor(cpu: CPU, memory) {
+    constructor(cpu: CPU, memory: Memory) {
         this.cpu    = cpu;
         this.memory = memory;
     }

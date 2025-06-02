@@ -1,16 +1,18 @@
+import { RomReader } from './rom'
+
 // A RomAjaxReader is able to load a file through an AJAX request
-class RomAjaxReader {
+class RomAjaxReader implements RomReader {
     callback: Function;
 
     // The callback argument will be called when a file is successfully
     // read, with the data as argument (Uint8Array)
-    setCallback(onLoadCallback) {
+    setCallback(onLoadCallback: Function) {
         this.callback = onLoadCallback;
     }
 
     // This function should be called by application code
     // and will trigger the AJAX call itself and push data to the ROM object
-    loadFromUrl(url) {
+    loadFromUrl(url: string) {
         if (!url) {
             throw 'No url has been set in order to load a ROM file.';
         }

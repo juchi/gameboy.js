@@ -2,9 +2,7 @@ import APU from './apu';
 import {AbstractAudioChannel} from './channel';
 
 class Channel1 extends AbstractAudioChannel {
-    soundLengthUnit = 0x4000; // 1 / 256 second of instructions
     soundLength = 64; // defaults to 64 periods
-    lengthCheck = false;
 
     sweepTime = 0; // from 0 to 7
     sweepStepLength = 0x8000; // 1 / 128 seconds of instructions
@@ -20,7 +18,6 @@ class Channel1 extends AbstractAudioChannel {
     envelopeSign = 1;
     envelopeVolume;
 
-    clockLength = 0;
     clockEnvelop = 0;
     clockSweep = 0;
 
@@ -66,10 +63,6 @@ class Channel1 extends AbstractAudioChannel {
         this.setDAC((controlRegister & 0xF8) > 0);
     }
 
-    setDAC (value) {
-        this.dac = value;
-        if (!value) this.stop();
-    }
     checkFreqSweep() {
         var oldFreq = this.getFrequency();
         var newFreq = oldFreq + this.sweepSign * (oldFreq >> this.sweepShifts);
@@ -107,17 +100,7 @@ class Channel1 extends AbstractAudioChannel {
             }
         }
 
-        if (this.lengthCheck) {
-            this.clockLength += clockElapsed;
-            if (this.clockLength > this.soundLengthUnit) {
-                this.soundLength--;
-                this.clockLength -= this.soundLengthUnit;
-                if (this.soundLength == 0) {
-                    this.setLength(0);
-                    this.stop();
-                }
-            }
-        }
+        this.checkLength(clockElapsed);
     }
     setFrequency(value) {
         this.frequency = value;

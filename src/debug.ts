@@ -54,7 +54,7 @@ Debug.view_tile = function(gameboy: Gameboy, index: number, dataStart?: number):
 
 Debug.list_visible_sprites = function(gameboy: Gameboy) {
     let memory = gameboy.cpu.memory;
-    let indexes = [];
+    let indexes: Array<object> = [];
     for (let i = 0xFE00; i < 0xFE9F; i += 4) {
         let x = memory.oamram(i + 1);
         let y = memory.oamram(i);

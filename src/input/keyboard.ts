@@ -3,16 +3,16 @@ import {JoypadDevice} from './input';
 // Keyboard listener
 // Does the mapping between the keyboard and the Input class
 class Keyboard implements JoypadDevice {
-    onPress;
-    onRelease;
+    onPress: Function;
+    onRelease: Function;
 
     // Initialize the keyboard listeners and set up the callbacks
     // for button press / release
-    init(canvas, onPress, onRelease) {
+    init(canvas: HTMLElement, onPress: Function, onRelease: Function) {
         this.onPress = onPress;
         this.onRelease = onRelease;
         if (canvas.getAttribute('tabIndex') === null)  {
-            canvas.setAttribute('tabIndex', 1);
+            canvas.setAttribute('tabIndex', '1');
         }
 
         let self = this;
@@ -44,7 +44,7 @@ class Keyboard implements JoypadDevice {
 
     // Transform a keyboard keycode into a key of the Input.keys object
     translateKey(keycode) {
-        let key = null;
+        let key = '';
         switch (keycode) {
             case 71: // G
                 key = 'A';

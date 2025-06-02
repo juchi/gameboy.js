@@ -1,9 +1,10 @@
+import { RomReader } from './rom';
+
 // A RomFileReader is able to load a local file from an input element
 //
 // Expects to be provided a file input element,
 // or will try to find one with the "file" DOM ID
-class RomFileReader
-{
+class RomFileReader implements RomReader {
     domElement: HTMLElement;
     callback: Function;
 
@@ -21,7 +22,7 @@ class RomFileReader
 
     // The callback argument will be called when a file is successfully
     // read, with the data as argument (Uint8Array)
-    setCallback(onLoadCallback) {
+    setCallback(onLoadCallback: Function) {
         this.callback = onLoadCallback;
     }
 

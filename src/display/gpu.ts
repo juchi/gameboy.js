@@ -19,16 +19,16 @@ class GPU {
     OAM_END   = 0xFE9F;
     VBLANK_TIME = 70224;
 
-    cpu;
-    screen;
-    vram;
-    deviceram;
-    oamram;
-    clock;
-    mode;
-    line;
-    buffer;
-    tileBuffer;
+    cpu: CPU;
+    screen: Screen;
+    vram: Function;
+    deviceram: Function;
+    oamram: Function;
+    clock: number;
+    mode: number;
+    line: number;
+    buffer: number[];
+    tileBuffer: number[];
 
     constructor(screen, cpu) {
         this.cpu = cpu;
@@ -383,9 +383,9 @@ class GPU {
     // A palette will map a tile color to a final palette color index
     // used with Screen.colors to get a shade of grey
     static getPalette(paletteByte) {
-        var palette = [];
+        let palette: number[] = [];
         for (var i = 0; i < 8; i += 2) {
-            var shade = (paletteByte & (3 << i)) >> i;
+            let shade = (paletteByte & (3 << i)) >> i;
             palette.push(shade);
         }
         return palette;

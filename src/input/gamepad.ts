@@ -21,20 +21,20 @@ let standardMapping = {
 // Any physical controller can be used but the mapping should be provided
 // in order to get an optimal layout of the buttons (see above)
 class Gamepad implements JoypadDevice {
-    gamepad = null;
+    gamepad: globalThis.Gamepad;
     state = {A:0,B:0,START:0,SELECT:0,LEFT:0,RIGHT:0,UP:0,DOWN:0};
-    pullInterval = null;
-    onPress;
-    onRelease;
-    buttonMapping;
+    pullInterval: ReturnType<typeof setInterval>;
+    onPress: Function;
+    onRelease: Function;
+    buttonMapping: object;
 
-    constructor(mapping) {
+    constructor(mapping?: object) {
         this.buttonMapping = mapping || standardMapping;
     }
 
     // Initialize the keyboard listeners and set up the callbacks
     // for button press / release
-    init(canvas, onPress, onRelease) {
+    init(canvas: HTMLElement, onPress: Function, onRelease: Function) {
         this.onPress = onPress;
         this.onRelease = onRelease;
 
@@ -44,7 +44,6 @@ class Gamepad implements JoypadDevice {
             self.activatePull();
         });
         window.addEventListener('gamepaddisconnected', function(e) {
-            self.gamepad = null;
             self.deactivatePull();
         });
     }

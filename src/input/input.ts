@@ -1,4 +1,5 @@
 import CPU from '../cpu';
+import Memory from '../memory';
 
 // The Input management system
 //
@@ -8,16 +9,16 @@ import CPU from '../cpu';
 // They rely on the name of the original buttons as parameters (see Input.keys)
 
 export interface JoypadDevice {
-    init(canvas, onPress, onRelease): void;
+    init(canvas: HTMLElement, onPress: Function, onRelease: Function): void;
 }
 
 class Input {
-    cpu;
-    memory;
+    cpu: CPU;
+    memory: Memory;
     P1: number;
     state: number;
     interruptQueue: Array<any>;
-    constructor(cpu, pad: JoypadDevice, canvas) {
+    constructor(cpu: CPU, pad: JoypadDevice, canvas) {
         this.cpu = cpu;
         this.memory = cpu.memory;
         this.P1 = 0xFF00;

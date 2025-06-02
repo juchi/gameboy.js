@@ -1,19 +1,20 @@
 import Channel1 from './channel1';
 import Channel3 from './channel3';
 import Channel4 from './channel4';
+import Memory from '../memory';
 
 // Audio Processing unit
 // Listens the write accesses to the audio-reserved memory addresses
 // and dispatches the data to the sound channels
 class APU {
-    memory;
+    memory: Memory;
     enabled = false;
     channel1;
     channel2;
     channel3;
     channel4;
 
-    constructor(memory) {
+    constructor(memory: Memory) {
         this.memory = memory;
         this.enabled = false;
 

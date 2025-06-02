@@ -1,5 +1,7 @@
+import { RomReader } from './rom'
+
 // A RomDropFileReader is able to load a drag and dropped file
-class RomDropFileReader {
+class RomDropFileReader implements RomReader {
     dropElement: HTMLElement;
     callback: Function;
 
@@ -40,7 +42,7 @@ class RomDropFileReader {
 
     // The callback argument will be called when a file is successfully
     // read, with the data as argument (Uint8Array)
-    setCallback(onLoadCallback) {
+    setCallback(onLoadCallback: Function) {
         this.callback = onLoadCallback;
     }
 

@@ -44,7 +44,7 @@ MBC1.prototype.manageWrite = function(addr, value) {
     switch (addr & 0xF000) {
         case 0x0000: case 0x1000: // enable RAM
             this.ramEnabled = (value & 0x0A) ? true : false;
-            if (this.ramEnabled) {
+            if (!this.ramEnabled) {
                 this.extRam.saveRamData();
             }
             break;
@@ -91,7 +91,7 @@ MBC3.prototype.manageWrite = function(addr, value) {
     switch (addr & 0xF000) {
         case 0x0000: case 0x1000: // enable RAM
             this.ramEnabled = (value & 0x0A) ? true : false;
-            if (this.ramEnabled) {
+            if (!this.ramEnabled) {
                 this.extRam.saveRamData();
             }
             break;
@@ -121,12 +121,23 @@ MBC3.prototype.readRam = function(addr) {
 var MBC5 = MBC3;
 
 // MBC0 exists for consistency and manages the no-MBC cartriges
-var MBC0 = function(memory) {this.memory = memory;};
+var MBC0 = function(memory) {
+    this.memory = memory;
+    this.extRam = new ExtRam();
+};
 
 MBC0.prototype.manageWrite = function(addr, value) {
     this.memory.loadRomBank(value);
+    if (addr >= 0xA000 && addr < 0xC000) {
+        this.extRam.manageWrite(addr - 0xA000, value);
+        this.extRam.saveRamData();
+    }
 };
-MBC0.prototype.readRam = function(addr) {return 0;};
-MBC0.prototype.loadRam = function() {};
+MBC0.prototype.readRam = function(addr) {
+    return this.extRam.manageRead(addr - 0xA000);
+};
+MBC0.prototype.loadRam = function(game, size) {
+    this.extRam.loadRam(game, size);
+};
 
 export default MBC;

@@ -3,8 +3,7 @@ import CPU from './cpu';
 // Utility functions
 let Util = {
     // Add to the first argument the properties of all other arguments
-    extend: function(target /*, source1, source2, etc. */) {
-        let sources = Array.prototype.slice.call(arguments);
+    extend: function(target , ...sources/*, source1, source2, etc. */) {
         for (let i in sources) {
             let source = sources[i];
             for (let name in source) {

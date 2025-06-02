@@ -2,7 +2,7 @@ class Rom {
     gameboy;
     data: Uint8Array;
 
-    constructor(gameboy, romReader) {
+    constructor(gameboy, romReader?) {
         this.gameboy = gameboy;
         if (romReader) {
             this.addReader(romReader);

@@ -7,7 +7,7 @@ import Util from './util';
 import CPU from './cpu';
 import GPU from './display/gpu';
 import Screen from './display/screen';
-import Input from './input/input';
+import Input, { JoypadDevice } from './input/input'
 import UnimplementedException from './exception';
 import Debug from './debug';
 
@@ -26,6 +26,16 @@ let defaultOptions = {
 // Will delegate user actions to the emulated devices
 // and provide information where needed
 class Gameboy {
+    options;
+    cpu: CPU;
+    screen: Screen;
+    input: Input;
+    pad: JoypadDevice;
+
+    statusContainer: HTMLElement;
+    gameNameContainer: HTMLElement;
+    errorContainer: HTMLElement;
+
     constructor(canvas, options) {
         options = options || {};
         this.options = Util.extend({}, defaultOptions, options);
@@ -52,7 +62,7 @@ class Gameboy {
     }
 
     // Create the ROM object and bind one or more readers
-    createRom(readers) {
+    createRom(readers: any[]) {
         var rom = new Rom(this);
         if (readers.length == 0) {
             // add the default rom reader

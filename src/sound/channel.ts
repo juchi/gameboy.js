@@ -18,6 +18,12 @@ abstract class AbstractAudioChannel implements AudioChannel {
     soundLength = 64; // defaults to 64 periods
     soundLengthUnit = 0x4000; // 1 / 256 second of instructions
 
+    constructor(apu: APU, channelNumber: number, audioContext: AudioContext) {
+        this.apu = apu;
+        this.channelNumber = channelNumber;
+        this.audioContext = audioContext;
+    }
+
     abstract play(): void;
     abstract stop(): void;
     abstract updateDAC(controlRegister: number): void;

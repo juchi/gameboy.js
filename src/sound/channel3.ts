@@ -11,10 +11,8 @@ class Channel3 extends AbstractAudioChannel {
     waveBuffer;
     bufferSource;
 
-    constructor(apu: APU, channelNumber, audioContext) {
-        super();
-        this.apu = apu;
-        this.channelNumber = channelNumber;
+    constructor(apu: APU, channelNumber: number, audioContext: AudioContext) {
+        super(apu, channelNumber, audioContext);
 
         this.buffer = new Float32Array(32);
 

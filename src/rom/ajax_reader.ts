@@ -2,7 +2,7 @@ import { RomReader } from './rom'
 
 // A RomAjaxReader is able to load a file through an AJAX request
 class RomAjaxReader implements RomReader {
-    callback: Function;
+    callback: Function | undefined;
 
     // The callback argument will be called when a file is successfully
     // read, with the data as argument (Uint8Array)

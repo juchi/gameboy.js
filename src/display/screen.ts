@@ -3,7 +3,7 @@ class Screen {
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D;
     pixelSize: number;
-    imageData: ImageData;
+    imageData: ImageData | undefined;
 
     constructor(canvas: HTMLCanvasElement, pixelSize: number) {
         this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -46,6 +46,9 @@ class Screen {
     }
 
     fillImageData(buffer) {
+        if (!this.imageData)
+            return;
+
         for (var y = 0; y < Screen.physics.HEIGHT; y++) {
             for (var py = 0; py < this.pixelSize; py++) {
                 var yOffset = (y * this.pixelSize + py) * this.canvas.width;
@@ -64,6 +67,9 @@ class Screen {
     }
 
     render(buffer) {
+        if (!this.imageData)
+            return;
+
         this.fillImageData(buffer);
         this.context.putImageData(this.imageData, 0, 0);
     }

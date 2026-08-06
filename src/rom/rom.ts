@@ -1,6 +1,6 @@
 class Rom {
     gameboy;
-    data: Uint8Array;
+    data: Uint8Array | undefined;
 
     constructor(gameboy, romReader?) {
         this.gameboy = gameboy;

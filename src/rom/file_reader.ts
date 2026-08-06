@@ -6,17 +6,20 @@ import { RomReader } from './rom';
 // or will try to find one with the "file" DOM ID
 class RomFileReader implements RomReader {
     domElement: HTMLElement;
-    callback: Function;
+    callback: Function | undefined;
 
     constructor(el?: HTMLElement) {
-        this.domElement = el || document.getElementById('file');
-        if (!this.domElement) {
-            throw 'The RomFileReader needs a valid input element.';
+        const domElement = el || document.getElementById('file');
+        if (!domElement) {
+            throw new Error('The RomFileReader needs a valid input element.');
         }
+        this.domElement = domElement;
 
         let self = this;
         this.domElement.addEventListener('change', function(e) {
-            self.loadFromFile((e.target as HTMLInputElement).files[0]);
+            const input = e.currentTarget as HTMLInputElement;
+            if (input.files?.length)
+                self.loadFromFile(input.files[0]);
         });
     }
 
@@ -38,7 +41,7 @@ class RomFileReader implements RomReader {
             cb && cb(new Uint8Array(fr.result as ArrayBuffer));
         };
         fr.onerror = function(e) {
-            console.log('Error reading the file', e.target.error.code)
+            console.log('Error reading the file', e.target?.error?.message)
         };
         fr.readAsArrayBuffer(file);
     }

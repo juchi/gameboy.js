@@ -24,10 +24,8 @@ class Channel1 extends AbstractAudioChannel {
     gainNode;
     oscillator;
 
-    constructor(apu: APU, channelNumber, audioContext) {
-        super();
-        this.apu = apu;
-        this.channelNumber = channelNumber;
+    constructor(apu: APU, channelNumber: number, audioContext: AudioContext) {
+        super(apu, channelNumber, audioContext);
 
         var gainNode = audioContext.createGain();
         gainNode.gain.value = 0;
@@ -37,7 +35,6 @@ class Channel1 extends AbstractAudioChannel {
         oscillator.connect(gainNode);
         oscillator.start(0);
 
-        this.audioContext = audioContext;
         this.gainNode = gainNode;
         this.oscillator = oscillator;
     }

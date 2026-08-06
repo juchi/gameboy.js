@@ -3,7 +3,7 @@ import { RomReader } from './rom'
 // A RomDropFileReader is able to load a drag and dropped file
 class RomDropFileReader implements RomReader {
     dropElement: HTMLElement;
-    callback: Function;
+    callback: Function | undefined;
 
     constructor(el) {
         this.dropElement = el;
@@ -32,7 +32,7 @@ class RomDropFileReader implements RomReader {
         });
         this.dropElement.addEventListener('drop', function (e) {
             self.dropElement.classList.remove('drag-active');
-            if (e.dataTransfer.files.length == 0) {
+            if (!e.dataTransfer || e.dataTransfer.files.length == 0) {
                 return;
             }
             e.preventDefault();
@@ -58,7 +58,7 @@ class RomDropFileReader implements RomReader {
             cb && cb(new Uint8Array(fr.result as ArrayBuffer));
         };
         fr.onerror = function(e) {
-            console.log('Error reading the file', e.target.error.code)
+            console.log('Error reading the file', e.target?.error?.message)
         };
         fr.readAsArrayBuffer(file);
     }

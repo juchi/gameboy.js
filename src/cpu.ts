@@ -13,7 +13,7 @@ class CPU {
     gameboy;
     r;
     clock;
-    gpu: GPU;
+    gpu!: GPU;
     apu: APU;
     input;
     timer: Timer;
@@ -27,14 +27,19 @@ class CPU {
     enableSerial = 0;
     serialHandler: SerialInterface;
 
-    nextFrameTimer: ReturnType<typeof setTimeout>;
+    nextFrameTimer: ReturnType<typeof setTimeout> | undefined;
 
     constructor(gameboy) {
         this.gameboy = gameboy;
         this.r = {A:0, F: 0, B:0, C:0, D:0, E:0, H:0, L:0, pc:0, sp:0};
         this.clock = {c: 0, serial: 0};
 
-        this.createDevices();
+        this.memory = new Memory(this);
+        this.timer = new Timer(this, this.memory);
+        this.apu = new APU(this.memory);
+
+        this.enableSerial = 0;
+        this.serialHandler = new ConsoleSerial;
     }
 
     static INTERRUPTS = {
@@ -50,15 +55,6 @@ class CPU {
         2: function(p){cpuOps.RSTn(p, 0x50);},
         3: function(p){cpuOps.RSTn(p, 0x58);},
         4: function(p){cpuOps.RSTn(p, 0x60);}
-    }
-
-    createDevices() {
-        this.memory = new Memory(this);
-        this.timer = new Timer(this, this.memory);
-        this.apu = new APU(this.memory);
-
-        this.enableSerial = 0;
-        this.serialHandler = new ConsoleSerial;
     }
 
     reset() {

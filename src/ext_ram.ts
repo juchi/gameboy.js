@@ -7,8 +7,11 @@ class ExtRam {
     ramBank: number;
 
     constructor() {
+        this.gameName = "";
+        this.extRam = [];
         this.ramSize = 0;
         this.ramBank = 0;
+        this.ramBanksize = 0;
     }
 
     loadRam(game: string, size: number) {

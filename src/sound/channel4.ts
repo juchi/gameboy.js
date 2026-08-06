@@ -2,12 +2,8 @@ import APU from './apu';
 import {AbstractAudioChannel} from './channel';
 
 class Channel4 extends AbstractAudioChannel {
-    constructor(apu, channelNumber, audioContext) {
-        super();
-        this.apu = apu;
-        this.channelNumber = channelNumber;
-
-        this.audioContext = audioContext;
+    constructor(apu: APU, channelNumber: number, audioContext: AudioContext) {
+        super(apu, channelNumber, audioContext);
     }
 
     play() {

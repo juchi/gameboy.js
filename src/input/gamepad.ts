@@ -21,18 +21,18 @@ let standardMapping = {
 // Any physical controller can be used but the mapping should be provided
 // in order to get an optimal layout of the buttons (see above)
 class Gamepad implements JoypadDevice {
-    gamepad: globalThis.Gamepad;
+    gamepad: globalThis.Gamepad | undefined;
     state = {A:0,B:0,START:0,SELECT:0,LEFT:0,RIGHT:0,UP:0,DOWN:0};
-    pullInterval: ReturnType<typeof setInterval>;
-    onPress: Function;
-    onRelease: Function;
+    pullInterval: ReturnType<typeof setInterval> | undefined;
+    onPress: Function | undefined;
+    onRelease: Function | undefined;
     buttonMapping: object;
 
     constructor(mapping?: object) {
         this.buttonMapping = mapping || standardMapping;
     }
 
-    // Initialize the keyboard listeners and set up the callbacks
+    // Initialize the gamepad listeners and set up the callbacks
     // for button press / release
     init(canvas: HTMLElement, onPress: Function, onRelease: Function) {
         this.onPress = onPress;
@@ -59,6 +59,8 @@ class Gamepad implements JoypadDevice {
 
     // Check the state of the current gamepad in order to detect any press/release action
     pullState() {
+        if (!this.gamepad) return;
+
         for (let index in this.buttonMapping) {
             let button = this.buttonMapping[index];
             let oldState = this.state[button];
@@ -73,11 +75,13 @@ class Gamepad implements JoypadDevice {
     }
 
     managePress(key) {
-        this.onPress(key);
+        if (this.onPress)
+            this.onPress(key);
     }
 
     manageRelease(key) {
-        this.onRelease(key);
+        if (this.onRelease)
+            this.onRelease(key);
     }
 }
 

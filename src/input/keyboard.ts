@@ -3,8 +3,8 @@ import {JoypadDevice} from './input';
 // Keyboard listener
 // Does the mapping between the keyboard and the Input class
 class Keyboard implements JoypadDevice {
-    onPress: Function;
-    onRelease: Function;
+    onPress: Function | undefined;
+    onRelease: Function | undefined;
 
     // Initialize the keyboard listeners and set up the callbacks
     // for button press / release
@@ -17,57 +17,57 @@ class Keyboard implements JoypadDevice {
 
         let self = this;
         canvas.addEventListener('keydown', function(e) {
-            self.managePress(e.keyCode);
-            if (e.keyCode !== 9) // only keep Tab active
+            self.managePress(e.code);
+            if (e.code !== "Tab") // only keep Tab active
                 e.preventDefault();
         });
         canvas.addEventListener('keyup', function(e) {
-            self.manageRelease(e.keyCode);
-            if (e.keyCode !== 9) // only keep Tab active
+            self.manageRelease(e.code);
+            if (e.code !== "Tab") // only keep Tab active
                 e.preventDefault();
         });
     }
 
-    managePress(keycode) {
-        let key = this.translateKey(keycode);
-        if (key) {
+    managePress(code) {
+        let key = this.translateKey(code);
+        if (key && this.onPress) {
             this.onPress(key);
         }
     }
 
-    manageRelease(keycode) {
-        let key = this.translateKey(keycode);
-        if (key) {
+    manageRelease(code) {
+        let key = this.translateKey(code);
+        if (key && this.onRelease) {
             this.onRelease(key);
         }
     }
 
-    // Transform a keyboard keycode into a key of the Input.keys object
+    // Transform a keyboard code into a key of the Input.keys object
     translateKey(keycode) {
         let key = '';
         switch (keycode) {
-            case 71: // G
+            case "KeyG":
                 key = 'A';
                 break;
-            case 66: // B
+            case "KeyB":
                 key = 'B';
                 break;
-            case 72: // H
+            case "KeyH":
                 key = 'START';
                 break;
-            case 78: // N
+            case "KeyN":
                 key = 'SELECT';
                 break;
-            case 37: // left
+            case "ArrowLeft":
                 key = 'LEFT';
                 break;
-            case 38: // up
+            case "ArrowUp":
                 key = 'UP';
                 break;
-            case 39: // right
+            case "ArrowRight":
                 key = 'RIGHT';
                 break;
-            case 40: // down
+            case "ArrowDown":
                 key = 'DOWN';
                 break;
         }

@@ -6,7 +6,7 @@ class Memory extends Array {
     MEM_SIZE = 65536; // 64KB
     MBCtype = 0;
     banksize = 0x4000;
-    rom: Uint8Array;
+    rom: Uint8Array | undefined;
     mbc;
     cpu: CPU;
 
@@ -53,6 +53,11 @@ class Memory extends Array {
     loadRomBank(index) {
         var start = index ? 0x4000 : 0x0;
         var romStart = index * 0x4000;
+        
+        if (!this.rom || this.rom.length < romStart) {
+            throw new Error("Cannot load rom bank " + index);
+        }
+
         for (var i = 0; i < this.banksize; i++) {
             this[i + start] = this.rom[romStart + i];
         }

@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
     "outDir": "./dist/",
+    "rootDir": "./src",
     "allowJs": true,
     "target": "es6",
-    "moduleResolution": "node",
+    "module": "esnext",
+    "types": [],
     "noImplicitAny": false
-  }
+  },
+  "include": ["src"]
 }
